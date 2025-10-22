@@ -28,3 +28,9 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Desenvolvimento local
+
+1. Instale as dependências com `npm install`.
+2. Inicie o ambiente de desenvolvimento com `npm run dev`.
+3. Execute `npm run build` e `npm run start` para conferir um build de produção quando necessário.
