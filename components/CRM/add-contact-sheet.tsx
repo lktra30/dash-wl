@@ -150,7 +150,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button style={{ backgroundColor: brandColor }} className="hover:opacity-90">
+        <Button style={{ backgroundColor: brandColor }} className="hover:opacity-90 cursor-pointer">
           <Plus className="h-4 w-4" />
           Adicionar Contato
         </Button>
@@ -235,7 +235,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                 value={formData.status}
                 onValueChange={(value) => handleInputChange("status", value)}
               >
-                <SelectTrigger id="status" className="h-11">
+                <SelectTrigger id="status" className="h-11 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,7 +257,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                 value={formData.sdrId || ""}
                 onValueChange={(value) => handleInputChange("sdrId", value)}
               >
-                <SelectTrigger id="sdr" className="h-11">
+                <SelectTrigger id="sdr" className="h-11 cursor-pointer">
                   <SelectValue placeholder="Selecione um SDR" />
                 </SelectTrigger>
                 <SelectContent>
@@ -302,7 +302,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                 value={formData.closerId || ""}
                 onValueChange={(value) => handleInputChange("closerId", value)}
               >
-                <SelectTrigger id="closer" className="h-11">
+                <SelectTrigger id="closer" className="h-11 cursor-pointer">
                   <SelectValue placeholder="Selecione um Closer" />
                 </SelectTrigger>
                 <SelectContent>
@@ -341,10 +341,10 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
           </div>
 
           <SheetFooter className="flex-row gap-3">
-            <Button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="flex-1 h-11 hover:opacity-90"
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 h-11 hover:opacity-90 cursor-pointer"
               style={{ backgroundColor: brandColor }}
             >
               {isSubmitting ? "Criando..." : "Criar Contato"}
@@ -354,7 +354,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isSubmitting}
-              className="h-11 px-6"
+              className="h-11 px-6 cursor-pointer"
             >
               Cancelar
             </Button>

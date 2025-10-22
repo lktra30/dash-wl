@@ -138,11 +138,11 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
                 <Label htmlFor="edit-role">
                   Cargo <span className="text-destructive">*</span>
                 </Label>
-                <Select 
-                  value={formData.role} 
+                <Select
+                  value={formData.role}
                   onValueChange={(value) => setFormData({ ...formData, role: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Selecione o cargo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -169,7 +169,7 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
                   value={formData.department}
                   onValueChange={(value) => setFormData({ ...formData, department: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Selecione o departamento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -200,11 +200,11 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
                 <Label htmlFor="edit-status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: "active" | "inactive" | "on_leave") => 
+                  onValueChange={(value: "active" | "inactive" | "on_leave") =>
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -248,11 +248,11 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
               </div>
               <Select
                 value={formData.user_role}
-                onValueChange={(value: "admin" | "gestor" | "colaborador") => 
+                onValueChange={(value: "admin" | "gestor" | "colaborador") =>
                   setFormData({ ...formData, user_role: value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="cursor-pointer">
                   <SelectValue placeholder="Selecione o nível de acesso" />
                 </SelectTrigger>
                 <SelectContent>
@@ -270,14 +270,16 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="cursor-pointer"
             >
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isLoading}
-              style={{ 
+              className="cursor-pointer"
+              style={{
                 backgroundColor: whitelabel?.brandColor || '#3b82f6',
                 color: 'white'
               }}

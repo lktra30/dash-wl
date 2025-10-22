@@ -95,7 +95,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
     <div className="flex items-center gap-2">
       <Calendar className="h-4 w-4 text-muted-foreground" />
       <Select value={value.preset} onValueChange={(val) => handlePresetChange(val as DateRangePreset)}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px] cursor-pointer">
           <SelectValue placeholder="Selecionar período" />
         </SelectTrigger>
         <SelectContent>

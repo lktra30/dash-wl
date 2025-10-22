@@ -122,7 +122,7 @@ export default function SettingsPage() {
 
               {/* Save Button - Fixed at bottom */}
               <div className="flex justify-end pt-2 border-t">
-                <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                <Button onClick={handleSave} disabled={isSaving} className="gap-2 cursor-pointer">
                   {isSaving ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />

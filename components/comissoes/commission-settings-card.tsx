@@ -285,13 +285,13 @@ export function CommissionSettingsCard({
           </div>
         </div>
 
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={isSaving}
-          className="w-full md:w-auto"
-          style={{ 
+          className="w-full md:w-auto cursor-pointer"
+          style={{
             backgroundColor: brandColor,
-            borderColor: brandColor 
+            borderColor: brandColor
           }}
         >
           <Save className="h-4 w-4 mr-2" />

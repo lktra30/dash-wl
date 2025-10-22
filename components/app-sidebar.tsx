@@ -195,10 +195,10 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
         <SidebarMenu>
           {/* Theme Toggle Button */}
           <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={toggleTheme} 
+            <SidebarMenuButton
+              onClick={toggleTheme}
               tooltip={theme === "light" ? "Modo Escuro" : "Modo Claro"}
-              className="group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center"
+              className="group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center cursor-pointer"
             >
               {theme === "light" ? <Moon className="size-4" /> : <Sun className="size-4" />}
               <span className="group-data-[collapsible=icon]:hidden">{theme === "light" ? "Modo Escuro" : "Modo Claro"}</span>
@@ -211,7 +211,7 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center cursor-pointer"
                   tooltip={user.name}
                 >
                   <Avatar className="h-8 w-8 rounded-lg shrink-0">
@@ -238,7 +238,7 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
                   <div className="mt-1 capitalize">{user.role}</div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={logout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair
                 </DropdownMenuItem>

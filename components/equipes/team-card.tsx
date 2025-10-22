@@ -92,6 +92,7 @@ export function TeamCard({ team, businessModel = "TCV", isAdmin, onEdit, onDelet
                 size="icon"
                 onClick={() => onEdit?.(team)}
                 title="Editar equipe"
+                className="cursor-pointer"
               >
                 <Edit className="h-4 w-4" />
               </Button>
@@ -100,6 +101,7 @@ export function TeamCard({ team, businessModel = "TCV", isAdmin, onEdit, onDelet
                 size="icon"
                 onClick={() => onDelete?.(team.id)}
                 title="Excluir equipe"
+                className="cursor-pointer"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
@@ -137,7 +139,7 @@ export function TeamCard({ team, businessModel = "TCV", isAdmin, onEdit, onDelet
                   variant="ghost"
                   size="sm"
                   onClick={() => onManageMembers?.(team.id)}
-                  className="h-6 text-xs"
+                  className="h-6 text-xs cursor-pointer"
                 >
                   Gerenciar
                 </Button>

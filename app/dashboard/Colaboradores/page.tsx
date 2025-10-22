@@ -262,10 +262,10 @@ export default function EmployeesPage() {
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button 
-              className="gap-2" 
+            <Button
+              className="gap-2 cursor-pointer"
               onClick={handleAddEmployee}
-              style={{ 
+              style={{
                 backgroundColor: whitelabel?.brandColor || '#3b82f6',
                 color: 'white'
               }}
@@ -332,7 +332,7 @@ export default function EmployeesPage() {
                     Cargo <span className="text-destructive">*</span>
                   </Label>
                   <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                    <SelectTrigger className="bg-background">
+                    <SelectTrigger className="bg-background cursor-pointer">
                       <SelectValue placeholder="Selecione o cargo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -354,7 +354,7 @@ export default function EmployeesPage() {
                     value={formData.department}
                     onValueChange={(value) => setFormData({ ...formData, department: value })}
                   >
-                    <SelectTrigger className="bg-background">
+                    <SelectTrigger className="bg-background cursor-pointer">
                       <SelectValue placeholder="Selecione o departamento" />
                     </SelectTrigger>
                     <SelectContent>
@@ -387,7 +387,7 @@ export default function EmployeesPage() {
                     value={formData.status}
                     onValueChange={(value: "active" | "inactive") => setFormData({ ...formData, status: value })}
                   >
-                    <SelectTrigger className="bg-background">
+                    <SelectTrigger className="bg-background cursor-pointer">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -429,11 +429,11 @@ export default function EmployeesPage() {
                 </div>
                 <Select
                   value={formData.user_role}
-                  onValueChange={(value: "admin" | "gestor" | "colaborador") => 
+                  onValueChange={(value: "admin" | "gestor" | "colaborador") =>
                     setFormData({ ...formData, user_role: value })
                   }
                 >
-                  <SelectTrigger className="bg-background">
+                  <SelectTrigger className="bg-background cursor-pointer">
                     <SelectValue placeholder="Selecione o nível de acesso" />
                   </SelectTrigger>
                   <SelectContent>
@@ -446,14 +446,14 @@ export default function EmployeesPage() {
             </div>
 
             <div className="flex gap-3 justify-end pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="gap-2">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="gap-2 cursor-pointer">
                 <X className="h-4 w-4" />
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSaveNewEmployee} 
-                className="gap-2"
-                style={{ 
+              <Button
+                onClick={handleSaveNewEmployee}
+                className="gap-2 cursor-pointer"
+                style={{
                   backgroundColor: whitelabel?.brandColor || 'bg-primary',
                   color: 'white'
                 }}
@@ -607,7 +607,7 @@ export default function EmployeesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditEmployee(employee)}
-                                className="text-primary hover:text-primary"
+                                className="text-primary hover:text-primary cursor-pointer"
                                 title="Editar colaborador"
                               >
                                 <Edit className="h-4 w-4" />
@@ -616,7 +616,7 @@ export default function EmployeesPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setDeleteEmployeeId(employee.id)}
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive cursor-pointer"
                                 title="Excluir colaborador"
                               >
                                 <Trash2 className="h-4 w-4" />

@@ -279,7 +279,7 @@ export function EditContactSheet({
                 value={formData.status}
                 onValueChange={(value) => handleInputChange("status", value)}
               >
-                <SelectTrigger id="edit-status" className="h-11">
+                <SelectTrigger id="edit-status" className="h-11 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -301,7 +301,7 @@ export function EditContactSheet({
                 value={formData.sdrId || ""}
                 onValueChange={(value) => handleInputChange("sdrId", value)}
               >
-                <SelectTrigger id="edit-sdr" className="h-11">
+                <SelectTrigger id="edit-sdr" className="h-11 cursor-pointer">
                   <SelectValue placeholder="Selecione um SDR" />
                 </SelectTrigger>
                 <SelectContent>
@@ -346,7 +346,7 @@ export function EditContactSheet({
                 value={formData.closerId || ""}
                 onValueChange={(value) => handleInputChange("closerId", value)}
               >
-                <SelectTrigger id="edit-closer" className="h-11">
+                <SelectTrigger id="edit-closer" className="h-11 cursor-pointer">
                   <SelectValue placeholder="Selecione um Closer" />
                 </SelectTrigger>
                 <SelectContent>
@@ -425,10 +425,10 @@ export function EditContactSheet({
           </div>
 
           <SheetFooter className="flex-row px-4 pt-4">
-            <Button 
-              type="submit" 
-              disabled={isSubmitting} 
-              className="flex-1 h-11 hover:opacity-90"
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 h-11 hover:opacity-90 cursor-pointer"
               style={{ backgroundColor: brandColor }}
             >
               {isSubmitting ? "Atualizando..." : "Atualizar Contato"}
@@ -438,7 +438,7 @@ export function EditContactSheet({
               variant="outline"
               onClick={() => handleSheetOpenChange(false)}
               disabled={isSubmitting}
-              className="h-11 px-6"
+              className="h-11 px-6 cursor-pointer"
             >
               Cancelar
             </Button>

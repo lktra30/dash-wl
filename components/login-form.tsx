@@ -64,18 +64,10 @@ export function LoginForm() {
             />
           </div>
           {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full cursor-pointer" disabled={isLoading}>
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
-        <div className="mt-6 text-sm text-muted-foreground">
-          <p className="font-medium mb-2">Demo Accounts:</p>
-          <div className="space-y-1">
-            <p>Acme Corp: admin@acme.com</p>
-            <p>TechStart: admin@techstart.com</p>
-            <p className="text-xs mt-2">Note: You need to create these users in Supabase Auth first</p>
-          </div>
-        </div>
       </CardContent>
     </Card>
   )

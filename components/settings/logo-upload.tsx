@@ -223,7 +223,7 @@ export function LogoUpload({ currentLogoUrl, onLogoChange, disabled }: LogoUploa
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || isUploading}
-              className="gap-2"
+              className="gap-2 cursor-pointer"
             >
               {isUploading ? (
                 <>
@@ -245,7 +245,7 @@ export function LogoUpload({ currentLogoUrl, onLogoChange, disabled }: LogoUploa
                 size="sm"
                 onClick={handleRemoveLogo}
                 disabled={disabled || isUploading}
-                className="gap-2"
+                className="gap-2 cursor-pointer"
               >
                 <X className="h-4 w-4" />
                 Remover

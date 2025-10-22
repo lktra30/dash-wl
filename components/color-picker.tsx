@@ -34,7 +34,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
       {label && <Label>{label}</Label>}
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-start gap-2 bg-transparent">
+          <Button variant="outline" className="w-full justify-start gap-2 bg-transparent cursor-pointer">
             <div className="w-4 h-4 rounded border" style={{ backgroundColor: value }} />
             <Palette className="w-4 h-4" />
             <span className="flex-1 text-left">{value}</span>
@@ -50,7 +50,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
                   type="color"
                   value={value}
                   onChange={(e) => onChange(e.target.value)}
-                  className="w-12 h-10 p-1 border rounded"
+                  className="w-12 h-10 p-1 border rounded cursor-pointer"
                 />
                 <Input
                   value={value}
@@ -66,7 +66,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
                 {presetColors.map((color) => (
                   <button
                     key={color}
-                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-transform"
+                    className="w-8 h-8 rounded border-2 hover:scale-110 transition-transform cursor-pointer"
                     style={{
                       backgroundColor: color,
                       borderColor: value === color ? "#000" : "transparent",

@@ -132,7 +132,7 @@ export function ApiKeysCard({
               <button
                 type="button"
                 onClick={() => setShowMetaKey(!showMetaKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 {showMetaKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -141,6 +141,7 @@ export function ApiKeysCard({
               onClick={handleMetaAdsUpdate}
               disabled={!metaAdsKey.trim()}
               size="sm"
+              className="cursor-pointer"
             >
               {metaAdsConfigured ? "Update" : "Save"}
             </Button>
@@ -149,6 +150,7 @@ export function ApiKeysCard({
                 onClick={handleMetaAdsRemove}
                 variant="destructive"
                 size="sm"
+                className="cursor-pointer"
               >
                 Remove
               </Button>

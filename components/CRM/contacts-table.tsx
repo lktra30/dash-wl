@@ -234,7 +234,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
 
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] cursor-pointer">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +251,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
 
             {/* SDR Filter */}
             <Select value={sdrFilter} onValueChange={setSdrFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] cursor-pointer">
                 <SelectValue placeholder="SDR" />
               </SelectTrigger>
               <SelectContent>
@@ -268,7 +268,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
 
             {/* Closer Filter */}
             <Select value={closerFilter} onValueChange={setCloserFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] cursor-pointer">
                 <SelectValue placeholder="Closer" />
               </SelectTrigger>
               <SelectContent>
@@ -286,7 +286,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
             {/* Column Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="cursor-pointer">
                   <Settings2 className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -463,19 +463,20 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                         )}
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => setEditingContact(contact)}
                               title="Editar contato"
+                              className="cursor-pointer"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={() => setContactToDelete(contact)}
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive hover:text-destructive cursor-pointer"
                               title="Excluir contato"
                             >
                               <Trash2 className="h-4 w-4" />

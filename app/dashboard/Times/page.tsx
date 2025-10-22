@@ -362,7 +362,7 @@ export default function TeamsPage() {
         description="Gerencie suas equipes e acompanhe a competição"
       >
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        <Button onClick={handleCreateTeam} style={{ backgroundColor: whitelabel.brandColor }}>
+        <Button onClick={handleCreateTeam} style={{ backgroundColor: whitelabel.brandColor }} className="cursor-pointer">
           <Plus className="h-4 w-4 mr-2" />
           Nova Equipe
         </Button>
@@ -415,11 +415,11 @@ export default function TeamsPage() {
                     <Select value={sortBy} onValueChange={(value: "ranking" | "name" | "date") => {
                       setSortBy(value)
                     }}>
-                      <SelectTrigger 
-                        className="w-[180px]"
-                        style={{ 
+                      <SelectTrigger
+                        className="w-[180px] cursor-pointer"
+                        style={{
                           borderColor: whitelabel.brandColor,
-                          outlineColor: whitelabel.brandColor 
+                          outlineColor: whitelabel.brandColor
                         }}
                       >
                         <SelectValue placeholder="Ordenar por..." />
@@ -455,7 +455,7 @@ export default function TeamsPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
                     <p className="text-muted-foreground mb-4">Nenhuma equipe criada ainda</p>
-                    <Button onClick={handleCreateTeam}>
+                    <Button onClick={handleCreateTeam} className="cursor-pointer">
                       <Plus className="h-4 w-4 mr-2" />
                       Criar Primeira Equipe
                     </Button>

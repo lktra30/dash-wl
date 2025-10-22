@@ -87,7 +87,7 @@ export function ContactCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 w-6 p-0"
+                className="h-6 w-6 p-0 cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsEditing(true)

@@ -276,7 +276,7 @@ export function TeamEditDialog({
                       <button
                         type="button"
                         onClick={handleRemoveLogo}
-                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 cursor-pointer"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -325,7 +325,7 @@ export function TeamEditDialog({
                           key={c}
                           type="button"
                           onClick={() => setColor(c)}
-                          className="w-9 h-9 rounded-lg border-2 transition-all hover:scale-110"
+                          className="w-9 h-9 rounded-lg border-2 transition-all hover:scale-110 cursor-pointer"
                           style={{
                             backgroundColor: c,
                             borderColor: color === c ? "hsl(var(--foreground))" : "transparent",
@@ -387,6 +387,7 @@ export function TeamEditDialog({
                               onClick={() => handleRemoveMember(member.id)}
                               disabled={managingMemberId === member.id}
                               title="Remover membro"
+                              className="cursor-pointer"
                             >
                               {managingMemberId === member.id ? (
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -457,6 +458,7 @@ export function TeamEditDialog({
                                 onClick={() => handleAddMember(employee.id)}
                                 disabled={managingMemberId === employee.id}
                                 title={isInAnotherTeam ? "Mover para esta equipe" : "Adicionar membro"}
+                                className="cursor-pointer"
                               >
                                 {managingMemberId === employee.id ? (
                                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -486,13 +488,15 @@ export function TeamEditDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
+            className="cursor-pointer"
           >
             Fechar
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             form="team-form"
             disabled={isLoading}
+            className="cursor-pointer"
           >
             {isLoading ? "Salvando..." : team ? "Salvar Alterações" : "Criar Equipe"}
           </Button>
