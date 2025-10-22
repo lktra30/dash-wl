@@ -2,64 +2,169 @@
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { StatsCard } from "@/components/stats-card"
+// import { StatsCard } from "@/components/stats-card"
 import { FunnelCard } from "@/components/funnel-card"
+import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from "@/components/date-range-filter"
+import { MainMetricsCards, calculateMainPageMetrics, TeamCompetition } from "@/components/mainPage"
+import { MeetingsGoalProgress, SalesGoalProgress } from "@/components/goals"
+import { MetaAdsMainCards, MetaAdsMonthlyChart } from "@/components/ads"
+import { SDRRanking } from "@/components/mainPage/sdr-ranking"
+import { CloserRanking } from "@/components/mainPage/closer-ranking"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/use-auth"
-import { useData } from "@/hooks/use-data"
 import { Users, Briefcase, DollarSign, TrendingUp, Trophy, Crown, Target, Zap } from "lucide-react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import type { MetaAdsMetrics, MetaAdsTimeSeriesData } from "@/lib/types"
 
 export default function DashboardPage() {
-  const { user, whitelabel } = useAuth()
-  const dataService = useData()
+  const { user, whitelabel, isLoading: authLoading } = useAuth()
   const [stats, setStats] = useState<any>(null)
+  const [mainMetrics, setMainMetrics] = useState<any>(null)
   const [recentContacts, setRecentContacts] = useState<any[]>([])
   const [recentDeals, setRecentDeals] = useState<any[]>([])
   const [topTeams, setTopTeams] = useState<any[]>([])
   const [competition, setCompetition] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
+  
+  // Meta Ads state
+  const [metaAdsMetrics, setMetaAdsMetrics] = useState<MetaAdsMetrics | null>(null)
+  const [metaAdsTimeSeries, setMetaAdsTimeSeries] = useState<MetaAdsTimeSeriesData[]>([])
+  const [isMetaAdsLoading, setIsMetaAdsLoading] = useState(true)
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!dataService) return
+      // Wait for auth to complete and ensure user exists
+      if (authLoading || !user) return
 
       setIsLoading(true)
       try {
-        const [analytics, contacts, deals, teams, competitions] = await Promise.all([
-          dataService.getAnalytics(),
-          dataService.getContacts(),
-          dataService.getDeals(),
-          dataService.getTopTeams(2),
-          Promise.resolve(dataService.getActiveCompetitions()),
-        ])
+        // Use the secure API endpoint instead of direct Supabase calls
+        const response = await fetch("/api/dashboard", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
 
-        setStats(analytics)
-        setRecentContacts(contacts.slice(0, 3))
-        setRecentDeals(deals.slice(0, 3))
-        setTopTeams(teams)
-        setCompetition(competitions[0] || null)
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`Failed to fetch dashboard data: ${response.statusText} - ${errorText}`)
+        }
+
+        const data = await response.json()
+        
+        setStats(data.analytics)
+        setRecentContacts(data.contacts.slice(0, 3))
+        setRecentDeals((data.recentDeals || data.deals || []).slice(0, 3))
+        setTopTeams(data.topTeams)
+        setCompetition(data.competitions[0] || null)
+        
+        // Calculate main page metrics
+        if (whitelabel && data.deals && data.contacts) {
+          const metrics = calculateMainPageMetrics({
+            deals: data.deals,
+            contacts: data.contacts,
+            adSpend: data.adSpend || 0,
+            previousPeriodData: data.previousPeriodData,
+            businessModel: whitelabel.businessModel || "TCV",
+          })
+          setMainMetrics(metrics)
+        }
       } catch (error) {
-        console.error("[v0] Error loading dashboard data:", error)
+        setStats(null)
+        setRecentContacts([])
+        setRecentDeals([])
+        setTopTeams([])
+        setCompetition(null)
+        setMainMetrics(null)
       } finally {
         setIsLoading(false)
       }
     }
 
     loadDashboardData()
-  }, [dataService])
+  }, [user, authLoading, whitelabel, dateRange])
+
+  // Load Meta Ads data - Cards filtered by dateRange, Chart shows 1 year
+  useEffect(() => {
+    const loadMetaAdsData = async () => {
+      if (authLoading || !user) return
+
+      setIsMetaAdsLoading(true)
+      try {
+        // Fetch cards data (filtered by date range)
+        const cardsParams = new URLSearchParams({
+          type: "cards",
+          from: dateRange.from.toISOString().split('T')[0],
+          to: dateRange.to.toISOString().split('T')[0]
+        })
+        
+        const cardsResponse = await fetch(`/api/dashboard/ads?${cardsParams}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        // Fetch chart data (last 1 year, independent of filter)
+        const chartResponse = await fetch("/api/dashboard/ads?type=chart", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (cardsResponse.ok && chartResponse.ok) {
+          const cardsData = await cardsResponse.json()
+          const chartData = await chartResponse.json()
+          
+          if (cardsData.success) {
+            setMetaAdsMetrics(cardsData.metrics)
+          }
+          if (chartData.success) {
+            setMetaAdsTimeSeries(chartData.timeSeries)
+          }
+        } else {
+          setMetaAdsMetrics(null)
+          setMetaAdsTimeSeries([])
+        }
+      } catch (error) {
+        setMetaAdsMetrics(null)
+        setMetaAdsTimeSeries([])
+        // Silently ignore errors - Meta Ads is optional
+      } finally {
+        setIsMetaAdsLoading(false)
+      }
+    }
+
+    loadMetaAdsData()
+  }, [user, authLoading, dateRange])
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <DashboardHeader title="Painel Comercial" description="Carregando..." />
+        <div className="flex-1 overflow-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Autenticando...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   if (!user || !whitelabel) return null
 
   if (isLoading) {
     return (
       <DashboardLayout>
-        <DashboardHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
+        <DashboardHeader title="Painel Comercial" description={`Bem-vindo, ${user.name}`} />
         <div className="flex-1 overflow-auto p-6">
           <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Loading dashboard...</p>
+            <p className="text-muted-foreground">Carregando...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -70,43 +175,82 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <DashboardHeader title="Dashboard" description={`Welcome back, ${user.name}`} />
+      <DashboardHeader title="Dashboard" description={`Bem-vindo, ${user.name}`}>
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </DashboardHeader>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 space-y-6 ">
+
+        {whitelabel.teamCompetition && (
+            <div className="space-y-4">
+              <TeamCompetition whitelabelId={user.whitelabelId} />
+            </div>
+        )}
+
         <div className="space-y-6">
-          {/* Stats Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <StatsCard
-              title="Total Contacts"
-              value={stats.totalContacts}
-              description="Active contacts in your CRM"
-              icon={Users}
-              trend={{ value: 12, isPositive: true }}
+          {/* Goals Progress Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MeetingsGoalProgress whitelabelId={user.whitelabelId} />
+            <SalesGoalProgress whitelabelId={user.whitelabelId} />
+          </div>
+          
+          {/* Main Metrics Grid - New Feature */}
+          {mainMetrics ? (
+            <MainMetricsCards metrics={mainMetrics} isLoading={false} brandColor={whitelabel.brandColor} />
+          ) : (
+            <MainMetricsCards metrics={null as any} isLoading={true} brandColor={whitelabel.brandColor} />
+          )}
+
+          {/* Meta Ads Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Meta Ads</h2>
+                <p className="text-muted-foreground">Métricas de desempenho dos anúncios do Facebook</p>
+              </div>
+              {/* <Link href="/dashboard/Ads">
+                <button
+                  className="px-4 py-2 rounded-lg text-white font-medium text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                  style={{ backgroundColor: whitelabel.brandColor }}
+                >
+                  Ver Detalhes →
+                </button>
+              </Link> */}
+            </div>
+            
+            <MetaAdsMainCards 
+              metrics={metaAdsMetrics} 
+              isLoading={isMetaAdsLoading} 
+                brandColor={whitelabel.brandColor}
+              roas={mainMetrics?.roas.value}
             />
-            <StatsCard
-              title="Active Deals"
-              value={stats.totalDeals}
-              description="Deals in your pipeline"
-              icon={Briefcase}
-              trend={{ value: 8, isPositive: true }}
-            />
-            <StatsCard
-              title="Revenue"
-              value={`$${stats.totalRevenue.toLocaleString()}`}
-              description="Closed won deals"
-              icon={DollarSign}
-              trend={{ value: 23, isPositive: true }}
-            />
-            <StatsCard
-              title="Pipeline Value"
-              value={`$${stats.pipelineValue.toLocaleString()}`}
-              description="Potential revenue"
-              icon={TrendingUp}
-              trend={{ value: 5, isPositive: true }}
+            
+            <MetaAdsMonthlyChart 
+              data={metaAdsTimeSeries} 
+              brandColor={whitelabel.brandColor}
+              isLoading={isMetaAdsLoading}
             />
           </div>
 
-          <FunnelCard />
+          {/* Rankings Section */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Rankings de Performance</h2>
+              <p className="text-muted-foreground">Top performers de SDRs e Closers</p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SDRRanking limit={5} />
+              <CloserRanking limit={5} />
+            </div>
+          </div>
+
+          {/* Team Competition Section - Only if enabled and 2+ teams */}
+
+          {/* Funnel Section with Side Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <FunnelCard dateRange={{ from: dateRange.from, to: dateRange.to }} />
+          </div>
 
           {/* Team Competition Section */}
           {competition && topTeams.length > 0 && (
@@ -248,53 +392,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
-
-          {/* Recent Activity */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Contacts</CardTitle>
-                <CardDescription>Latest contacts added to your CRM</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentContacts.map((contact) => (
-                    <div key={contact.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-foreground">{contact.name}</p>
-                        <p className="text-sm text-muted-foreground">{contact.company}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm capitalize text-muted-foreground">{contact.status}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Deals</CardTitle>
-                <CardDescription>Latest deals in your pipeline</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentDeals.map((deal) => (
-                    <div key={deal.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-foreground">{deal.title}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{deal.stage.replace("-", " ")}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-foreground">${deal.value.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     </DashboardLayout>

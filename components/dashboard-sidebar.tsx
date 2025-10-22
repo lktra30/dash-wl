@@ -4,17 +4,31 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { useTheme } from "@/hooks/use-theme"
-import { LayoutDashboard, Users, Briefcase, Activity, Settings, LogOut, Moon, Sun, Trophy } from "lucide-react"
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  Activity,
+  Settings,
+  LogOut,
+  Moon,
+  Sun,
+  Trophy,
+  UserRound,
+  BarChart3,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Contacts", href: "/dashboard/contacts", icon: Users },
-  { name: "Deals", href: "/dashboard/deals", icon: Briefcase },
-  { name: "Activities", href: "/dashboard/activities", icon: Activity },
-  { name: "Equipes", href: "/dashboard/teams", icon: Trophy },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
+  { name: "CRM", href: "/dashboard/CRM", icon: Users },
+  { name: "Vendas", href: "/dashboard/Vendas", icon: Briefcase },
+  // { name: "Métricas", href: "/dashboard/Metricas", icon: Activity },
+  { name: "Equipes", href: "/dashboard/Times", icon: Trophy },
+  // { name: "Anúncios", href: "/dashboard/Ads", icon: BarChart3 },
+  { name: "Colaboradores", href: "/dashboard/Colaboradores", icon: UserRound },
+  { name: "Configurações", href: "/dashboard/Configuracoes", icon: Settings },
 ]
 
 export function DashboardSidebar() {

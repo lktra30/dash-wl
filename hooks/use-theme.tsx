@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useAuth } from "./use-auth"
-import { supabaseDataService } from "@/lib/supabase-data-service"
 
 type Theme = "light" | "dark"
 
@@ -27,8 +26,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (mounted && auth.whitelabel?.brand_color) {
-      setBrandColorState(auth.whitelabel.brand_color)
+    if (mounted && auth.whitelabel?.brandColor) {
+      setBrandColorState(auth.whitelabel.brandColor)
     }
   }, [mounted, auth.whitelabel])
 
@@ -61,13 +60,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setBrandColor = async (color: string) => {
     setBrandColorState(color)
-    if (auth.whitelabel) {
-      try {
-        await supabaseDataService.updateWhitelabel(auth.whitelabel.id, { brand_color: color })
-      } catch (error) {
-        console.error("[v0] Error updating brand color:", error)
-      }
-    }
+    // TODO: Implement API endpoint to update whitelabel brand color
+    // For now, the color is only updated in the local state
   }
 
   return (

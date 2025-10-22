@@ -23,19 +23,33 @@ export async function GET(request: NextRequest) {
     const whitelabelId = user.whitelabel_id
 
     // Fetch commission settings for this whitelabel
-    const { data: settings, error: fetchError } = await supabase
+    const { data: records, error: fetchError } = await supabase
       .from("commissions_settings")
       .select("*")
       .eq("whitelabel_id", whitelabelId)
-      .single()
 
     if (fetchError) {
-      // If no settings exist yet, return null (not an error)
-      if (fetchError.code === 'PGRST116') {
-        return NextResponse.json(null)
-      }
       return createErrorResponse(fetchError.message, 500)
     }
+
+    if (!records || records.length === 0) {
+      return NextResponse.json(null)
+    }
+
+    if (records.length > 1) {
+      console.error(
+        "[Commissions Settings] Multiple records detected for whitelabel",
+        whitelabelId,
+        "IDs:",
+        records.map((record) => record.id),
+      )
+      return createErrorResponse(
+        "Multiple commission settings entries exist for this whitelabel. Please contact support to resolve duplicates.",
+        500,
+      )
+    }
+
+    const settings = records[0]
 
     // Convert snake_case to camelCase
     const formattedSettings = {
@@ -109,22 +123,42 @@ export async function PUT(request: NextRequest) {
     if (updates.closerPerSaleCommission !== undefined) dbUpdates.closer_per_sale_commission = updates.closerPerSaleCommission
 
     // Try to update first
-    const { data: existingSettings } = await supabase
+    const { data: existingSettingsRecords, error: fetchExistingError } = await supabase
       .from("commissions_settings")
       .select("id")
       .eq("whitelabel_id", whitelabelId)
-      .single()
+
+    if (fetchExistingError) {
+      return createErrorResponse(fetchExistingError.message, 500)
+    }
+
+    if (existingSettingsRecords && existingSettingsRecords.length > 1) {
+      console.error(
+        "[Commissions Settings] Multiple records detected for whitelabel during update",
+        whitelabelId,
+        "IDs:",
+        existingSettingsRecords.map((record) => record.id),
+        "Payload:",
+        dbUpdates,
+      )
+      return createErrorResponse(
+        "Multiple commission settings entries exist for this whitelabel. Resolve duplicates before saving.",
+        500,
+      )
+    }
+
+    const existingSettings = existingSettingsRecords?.[0] ?? null
 
     let data, updateError
 
     if (existingSettings) {
-      // Update existing settings
+      // Update existing settings using whitelabel_id to identify the row
       const result = await supabase
         .from("commissions_settings")
         .update(dbUpdates)
         .eq("whitelabel_id", whitelabelId)
         .select()
-        .single()
+        .maybeSingle()
       
       data = result.data
       updateError = result.error
@@ -137,7 +171,7 @@ export async function PUT(request: NextRequest) {
           whitelabel_id: whitelabelId
         })
         .select()
-        .single()
+        .maybeSingle()
       
       data = result.data
       updateError = result.error
@@ -145,6 +179,10 @@ export async function PUT(request: NextRequest) {
 
     if (updateError) {
       return createErrorResponse(updateError.message, 500)
+    }
+
+    if (!data) {
+      return createErrorResponse("Commission settings row not found after update.", 404)
     }
 
     // Convert back to camelCase

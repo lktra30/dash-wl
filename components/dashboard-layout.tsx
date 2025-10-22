@@ -1,11 +1,12 @@
 "use client"
 
 import type React from "react"
-
+import { startTransition } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { DashboardSidebar } from "./dashboard-sidebar"
+import { AppSidebar } from "./app-sidebar"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -17,7 +18,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/")
+      // Use startTransition for smoother navigation
+      startTransition(() => {
+        router.push("/")
+      })
     }
   }, [user, isLoading, router])
 
@@ -37,9 +41,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <div className="p-1 md:p-2 bg-sidebar min-h-screen">
+          <div className="bg-background rounded-xl flex flex-col min-h-[calc(100vh-2rem)] md:min-h-[calc(100vh-3rem)]">
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

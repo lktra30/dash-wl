@@ -2,14 +2,14 @@
 
 import { useMemo } from "react"
 import { useAuth } from "./use-auth"
-import { createSupabaseDataService } from "@/lib/supabase-data-service"
+import { createSecureDataService } from "@/lib/supabase-data-service"
 
-export function useData() {
+export default function useData() {
   const { user } = useAuth()
 
   const dataService = useMemo(() => {
     if (!user) return null
-    return createSupabaseDataService(user.whitelabel_id)
+    return createSecureDataService()
   }, [user])
 
   return dataService

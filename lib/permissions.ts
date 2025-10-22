@@ -1,105 +1,178 @@
 import type { User } from "./types"
+import { getSupabaseServerClient } from "@/lib/supabase/server"
 
-// Permission system for whitelabel CRM
-export enum Permission {
-  // Contact permissions
-  VIEW_CONTACTS = "view_contacts",
-  CREATE_CONTACTS = "create_contacts",
-  EDIT_CONTACTS = "edit_contacts",
-  DELETE_CONTACTS = "delete_contacts",
+// ============================
+// LEGACY PERMISSIONS (Users table)
+// ============================
 
-  // Deal permissions
-  VIEW_DEALS = "view_deals",
-  CREATE_DEALS = "create_deals",
-  EDIT_DEALS = "edit_deals",
-  DELETE_DEALS = "delete_deals",
+// Simplified permission system - all users within a whitelabel have full access
+// Only SuperAdmin role is restricted for admin panel access
 
-  // Activity permissions
-  VIEW_ACTIVITIES = "view_activities",
-  CREATE_ACTIVITIES = "create_activities",
-  EDIT_ACTIVITIES = "edit_activities",
-  DELETE_ACTIVITIES = "delete_activities",
-
-  // Admin permissions
-  MANAGE_USERS = "manage_users",
-  MANAGE_WHITELABEL = "manage_whitelabel",
-  VIEW_ANALYTICS = "view_analytics",
+// Check if user is a SuperAdmin (for admin panel access only)
+export function isSuperAdmin(user: User): boolean {
+  return user.role === "SuperAdmin"
 }
 
-// Role-based permissions
-const rolePermissions: Record<string, Permission[]> = {
-  admin: [
-    // All contact permissions
-    Permission.VIEW_CONTACTS,
-    Permission.CREATE_CONTACTS,
-    Permission.EDIT_CONTACTS,
-    Permission.DELETE_CONTACTS,
-
-    // All deal permissions
-    Permission.VIEW_DEALS,
-    Permission.CREATE_DEALS,
-    Permission.EDIT_DEALS,
-    Permission.DELETE_DEALS,
-
-    // All activity permissions
-    Permission.VIEW_ACTIVITIES,
-    Permission.CREATE_ACTIVITIES,
-    Permission.EDIT_ACTIVITIES,
-    Permission.DELETE_ACTIVITIES,
-
-    // Admin permissions
-    Permission.MANAGE_USERS,
-    Permission.MANAGE_WHITELABEL,
-    Permission.VIEW_ANALYTICS,
-  ],
-  user: [
-    // Contact permissions
-    Permission.VIEW_CONTACTS,
-    Permission.CREATE_CONTACTS,
-    Permission.EDIT_CONTACTS,
-
-    // Deal permissions
-    Permission.VIEW_DEALS,
-    Permission.CREATE_DEALS,
-    Permission.EDIT_DEALS,
-
-    // Activity permissions
-    Permission.VIEW_ACTIVITIES,
-    Permission.CREATE_ACTIVITIES,
-    Permission.EDIT_ACTIVITIES,
-  ],
+// Check if user is an admin (includes both admin and superadmin roles)
+export function isAdmin(user: User): boolean {
+  const role = user.role?.toLowerCase()
+  return role === "admin" || role === "superadmin"
 }
 
-export function hasPermission(user: User, permission: Permission): boolean {
-  const userPermissions = rolePermissions[user.role] || []
-  return userPermissions.includes(permission)
-}
-
-export function hasAnyPermission(user: User, permissions: Permission[]): boolean {
-  return permissions.some((permission) => hasPermission(user, permission))
-}
-
-export function hasAllPermissions(user: User, permissions: Permission[]): boolean {
-  return permissions.every((permission) => hasPermission(user, permission))
-}
-
-// Resource-level permission checks
+// Resource-level permission checks - only verify whitelabel isolation
 export function canAccessResource(user: User, resourceWhitelabelId: string): boolean {
   // Users can only access resources from their own whitelabel
   return user.whitelabelId === resourceWhitelabelId
 }
 
-export function canEditResource(user: User, resourceWhitelabelId: string, resourceUserId?: string): boolean {
-  // Must be from same whitelabel
-  if (!canAccessResource(user, resourceWhitelabelId)) {
-    return false
-  }
+export function canEditResource(user: User, resourceWhitelabelId: string): boolean {
+  // All users within the same whitelabel can edit resources
+  return canAccessResource(user, resourceWhitelabelId)
+}
 
-  // Admins can edit any resource in their whitelabel
-  if (user.role === "admin") {
-    return true
-  }
+// ============================
+// NEW BACKEND PERMISSIONS (Employees table)
+// ============================
 
-  // Users can only edit their own resources
-  return resourceUserId === user.id
+export interface AuthenticatedEmployee {
+  id: string
+  email: string
+  name: string
+  user_role: 'admin' | 'gestor' | 'colaborador' | 'SuperAdmin'
+  whitelabel_id: string
+  team_id: string | null
+  role: string
+  department: string
+}
+
+export interface AuthenticatedUserWithRole {
+  id: string
+  email: string
+  name: string
+  user_role: 'admin' | 'gestor' | 'colaborador' | 'SuperAdmin'
+  whitelabel_id: string
+  isFromEmployeeTable: boolean
+}
+
+/**
+ * Get authenticated employee from Supabase Auth and employees table
+ * Returns null employee if not found (not an error - user might be admin in users table only)
+ */
+export async function getAuthenticatedEmployee(authEmail: string): Promise<{ employee: AuthenticatedEmployee | null; error: string | null }> {
+  try {
+    const supabase = await getSupabaseServerClient()
+    
+    // Get employee profile by email
+    const { data: employee, error: employeeError } = await supabase
+      .from("employees")
+      .select("id, email, name, user_role, whitelabel_id, team_id, role, department")
+      .eq("email", authEmail)
+      .eq("status", "active")
+      .single()
+
+    if (employeeError || !employee) {
+      // Not an error - user might be admin in users table only
+      return { employee: null, error: null }
+    }
+
+    return { 
+      employee: {
+        id: employee.id,
+        email: employee.email,
+        name: employee.name,
+        user_role: employee.user_role || 'colaborador',
+        whitelabel_id: employee.whitelabel_id,
+        team_id: employee.team_id,
+        role: employee.role,
+        department: employee.department
+      }, 
+      error: null 
+    }
+  } catch (error) {
+    return { employee: null, error: null }
+  }
+}
+
+/**
+ * Get user role with fallback logic:
+ * 1. If employee exists, use employee.user_role
+ * 2. If employee doesn't exist, check users table
+ * 3. If user.role is admin/SuperAdmin, grant admin access
+ * 4. Otherwise, treat as colaborador
+ */
+export async function getUserRoleWithFallback(authEmail: string, userFromUsersTable?: any): Promise<string> {
+  // First, try to get employee
+  const { employee } = await getAuthenticatedEmployee(authEmail)
+  
+  if (employee) {
+    return employee.user_role
+  }
+  
+  // If no employee, check users table
+  if (userFromUsersTable?.role) {
+    const userRole = userFromUsersTable.role.toLowerCase()
+    // Admin and SuperAdmin from users table get full admin access
+    if (userRole === 'admin' || userRole === 'superadmin') {
+      return 'admin'
+    }
+    // Manager gets gestor access
+    if (userRole === 'manager') {
+      return 'gestor'
+    }
+  }
+  
+  // Default to colaborador if no special role found
+  return 'colaborador'
+}
+
+/**
+ * Check if employee has permission based on user_role
+ * @param userRole - Employee's user_role from database
+ * @param requiredRoles - Array of roles that have access
+ */
+export function checkPermission(
+  userRole: string, 
+  requiredRoles: Array<'admin' | 'gestor' | 'colaborador' | 'SuperAdmin'>
+): boolean {
+  return requiredRoles.includes(userRole as any)
+}
+
+/**
+ * Check if employee has access to dashboard settings
+ * Only admin and SuperAdmin can access settings
+ */
+export function hasSettingsAccess(userRole: string): boolean {
+  return checkPermission(userRole, ['admin', 'SuperAdmin'])
+}
+
+/**
+ * Check if employee can view commission settings
+ * Admin, gestor, and SuperAdmin can view commissions
+ */
+export function hasCommissionViewAccess(userRole: string): boolean {
+  return checkPermission(userRole, ['admin', 'gestor', 'SuperAdmin'])
+}
+
+/**
+ * Check if employee can edit commission settings
+ * Only admin and SuperAdmin can edit commission settings
+ */
+export function hasCommissionEditAccess(userRole: string): boolean {
+  return checkPermission(userRole, ['admin', 'SuperAdmin'])
+}
+
+/**
+ * Check if employee has access to teams management
+ * Admin, gestor, and SuperAdmin can manage teams
+ */
+export function hasTeamsAccess(userRole: string): boolean {
+  return checkPermission(userRole, ['admin', 'gestor', 'SuperAdmin'])
+}
+
+/**
+ * Check if employee has access to goals management
+ * Admin, gestor, and SuperAdmin can manage goals
+ */
+export function hasGoalsAccess(userRole: string): boolean {
+  return checkPermission(userRole, ['admin', 'gestor', 'SuperAdmin'])
 }
