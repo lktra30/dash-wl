@@ -30,12 +30,12 @@ export function DashboardHeader({ title, description, children }: DashboardHeade
           </div>
         </div>
 
-        {/* <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
           {children}
           <Button variant="ghost" size="sm">
             <Bell className="h-4 w-4" />
           </Button>
-        </div> */}
+        </div>
       </div>
     </div>
   )
