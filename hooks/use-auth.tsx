@@ -51,6 +51,7 @@ function normalizeWhitelabel(raw: any): Whitelabel {
 
   return {
     name: raw.name ?? "",
+    domain: raw.domain ?? undefined,
     brandColor: raw.brandColor ?? raw.brand_color ?? undefined,
     logoUrl: raw.logoUrl ?? raw.logo_url ?? undefined,
     businessModel: raw.businessModel ?? raw.business_model ?? "MRR",

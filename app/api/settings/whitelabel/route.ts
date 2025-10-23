@@ -53,6 +53,7 @@ export async function PUT(request: NextRequest) {
   // Parse request body
   let body: {
     name?: string
+    domain?: string
     brandColor?: string
     businessModel?: "TCV" | "MRR"
     metaAdsKey?: string
@@ -85,6 +86,7 @@ export async function PUT(request: NextRequest) {
 
   // Add simple fields
   if (body.name !== undefined) updateData.name = body.name
+  if (body.domain !== undefined) updateData.domain = body.domain || null
   if (body.brandColor !== undefined) updateData.brand_color = body.brandColor
   if (body.businessModel !== undefined) updateData.business_model = body.businessModel
   if (body.metaAdsAccountId !== undefined) updateData.meta_ads_account_id = body.metaAdsAccountId || null
@@ -160,6 +162,7 @@ export async function PUT(request: NextRequest) {
     success: true,
     whitelabel: {
       name: updatedWhitelabel.name,
+      domain: updatedWhitelabel.domain,
       brandColor: updatedWhitelabel.brand_color,
       businessModel: updatedWhitelabel.business_model,
       metaAdsConfigured: !!updatedWhitelabel.meta_ads_key_encrypted,

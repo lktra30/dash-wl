@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
   // Filter sensitive whitelabel data - only send safe fields to frontend
   const safeWhitelabelData = {
     name: whitelabel.name,
+    domain: whitelabel.domain,
     brandColor: whitelabel.brand_color,
     logoUrl: whitelabel.logo_url,
     businessModel: whitelabel.business_model || 'MRR',
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
     googleAdsConfigured: !!whitelabel.google_ads_key_encrypted,
     metaAdsAccountId: whitelabel.meta_ads_account_id,
     teamCompetition: whitelabel.team_competition || false,
-    // Explicitly exclude: id, domain, created_at, updated_at, encrypted keys
+    // Explicitly exclude: id, created_at, updated_at, encrypted keys
   }
 
   const successResponse = NextResponse.json({ 

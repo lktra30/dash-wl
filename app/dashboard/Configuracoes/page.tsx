@@ -20,6 +20,7 @@ export default function SettingsPage() {
   
   // State
   const [whitelabelName, setWhitelabelName] = useState("")
+  const [domain, setDomain] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [tempBrandColor, setTempBrandColor] = useState(brandColor)
   const [businessModel, setBusinessModel] = useState<"TCV" | "MRR">("MRR")
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (whitelabel) {
       setWhitelabelName(whitelabel.name)
+      setDomain((whitelabel as any).domain || "")
       setLogoUrl(whitelabel.logoUrl || null)
       setTempBrandColor(whitelabel.brandColor || brandColor)
       setBusinessModel(whitelabel.businessModel || "MRR")
@@ -50,6 +52,7 @@ export default function SettingsPage() {
         credentials: "include",
         body: JSON.stringify({
           name: whitelabelName,
+          domain: domain,
           brandColor: tempBrandColor,
           businessModel,
           metaAdsAccountId,
@@ -108,6 +111,8 @@ export default function SettingsPage() {
                   <BusinessSettingsCard
                     whitelabelName={whitelabelName}
                     onWhitelabelNameChange={setWhitelabelName}
+                    domain={domain}
+                    onDomainChange={setDomain}
                     businessModel={businessModel}
                     onBusinessModelChange={setBusinessModel}
                     logoUrl={logoUrl}

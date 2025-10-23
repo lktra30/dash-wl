@@ -9,16 +9,20 @@ import { LogoUpload } from "./logo-upload"
 interface BusinessSettingsCardProps {
   whitelabelName: string
   onWhitelabelNameChange: (name: string) => void
+  domain: string
+  onDomainChange: (domain: string) => void
   businessModel: "TCV" | "MRR"
   onBusinessModelChange: (model: "TCV" | "MRR") => void
   logoUrl?: string | null
   onLogoChange: (logoUrl: string | null) => void
 }
 
-export function BusinessSettingsCard({ 
-  whitelabelName, 
+export function BusinessSettingsCard({
+  whitelabelName,
   onWhitelabelNameChange,
-  businessModel, 
+  domain,
+  onDomainChange,
+  businessModel,
   onBusinessModelChange,
   logoUrl,
   onLogoChange
@@ -48,6 +52,20 @@ export function BusinessSettingsCard({
             onChange={(e) => onWhitelabelNameChange(e.target.value)}
             placeholder="Digite o nome do seu dashboard"
           />
+        </div>
+
+        {/* Domain */}
+        <div className="space-y-2">
+          <Label htmlFor="domain">Domínio Personalizado</Label>
+          <Input
+            id="domain"
+            value={domain}
+            onChange={(e) => onDomainChange(e.target.value)}
+            placeholder="exemplo: dashboard.seusite.com"
+          />
+          <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-2">
+            <strong>💡 Dica:</strong> Este domínio será usado para o favicon dinâmico. Configure o DNS apontando para o Vercel após salvar.
+          </p>
         </div>
 
         {/* Business Model */}

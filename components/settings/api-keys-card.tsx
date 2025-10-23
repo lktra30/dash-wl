@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Key, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react"
-import { useState } from "react"
+import { Key, CheckCircle2, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { toast } from "sonner"
 
 interface ApiKeysCardProps {
   metaAdsConfigured: boolean
@@ -29,33 +30,140 @@ export function ApiKeysCard({
   const [accountId, setAccountId] = useState(metaAdsAccountId || "")
   const [showMetaKey, setShowMetaKey] = useState(false)
   const [showGoogleKey, setShowGoogleKey] = useState(false)
+  const [isSavingMeta, setIsSavingMeta] = useState(false)
+  const [isSavingGoogle, setIsSavingGoogle] = useState(false)
 
-  const handleMetaAdsUpdate = () => {
-    if (metaAdsKey.trim()) {
-      onMetaAdsKeyChange(metaAdsKey)
-      setMetaAdsKey("") // Clear input after update
+  useEffect(() => {
+    setAccountId(metaAdsAccountId || "")
+  }, [metaAdsAccountId])
+
+  const handleMetaAdsUpdate = async () => {
+    if (!metaAdsKey.trim() && !accountId.trim()) {
+      toast.error("Por favor, preencha o Account ID e o Access Token")
+      return
+    }
+
+    setIsSavingMeta(true)
+    try {
+      const response = await fetch("/api/settings/whitelabel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          metaAdsKey: metaAdsKey.trim(),
+          metaAdsAccountId: accountId.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Falha ao salvar chave do Meta Ads")
+      }
+
+      setMetaAdsKey("")
+      toast.success("Chave do Meta Ads salva com sucesso!")
+
+      // Reload to update the configured status
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar chave")
+    } finally {
+      setIsSavingMeta(false)
     }
   }
 
-  const handleGoogleAdsUpdate = () => {
-    if (googleAdsKey.trim()) {
-      onGoogleAdsKeyChange(googleAdsKey)
-      setGoogleAdsKey("") // Clear input after update
+  const handleGoogleAdsUpdate = async () => {
+    if (!googleAdsKey.trim()) {
+      toast.error("Por favor, preencha o Access Token")
+      return
+    }
+
+    setIsSavingGoogle(true)
+    try {
+      const response = await fetch("/api/settings/whitelabel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          googleAdsKey: googleAdsKey.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Falha ao salvar chave do Google Ads")
+      }
+
+      setGoogleAdsKey("")
+      toast.success("Chave do Google Ads salva com sucesso!")
+
+      // Reload to update the configured status
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar chave")
+    } finally {
+      setIsSavingGoogle(false)
     }
   }
 
-  const handleMetaAdsRemove = () => {
-    onMetaAdsKeyChange("") // Empty string signals removal
-    setMetaAdsKey("")
+  const handleMetaAdsRemove = async () => {
+    setIsSavingMeta(true)
+    try {
+      const response = await fetch("/api/settings/whitelabel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          metaAdsKey: "",
+          metaAdsAccountId: "",
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Falha ao remover chave do Meta Ads")
+      }
+
+      setMetaAdsKey("")
+      setAccountId("")
+      toast.success("Chave do Meta Ads removida com sucesso!")
+
+      // Reload to update the configured status
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao remover chave")
+    } finally {
+      setIsSavingMeta(false)
+    }
   }
 
-  const handleGoogleAdsRemove = () => {
-    onGoogleAdsKeyChange("") // Empty string signals removal
-    setGoogleAdsKey("")
-  }
+  const handleGoogleAdsRemove = async () => {
+    setIsSavingGoogle(true)
+    try {
+      const response = await fetch("/api/settings/whitelabel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          googleAdsKey: "",
+        }),
+      })
 
-  const handleAccountIdUpdate = () => {
-    onMetaAdsAccountIdChange(accountId.trim())
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Falha ao remover chave do Google Ads")
+      }
+
+      setGoogleAdsKey("")
+      toast.success("Chave do Google Ads removida com sucesso!")
+
+      // Reload to update the configured status
+      setTimeout(() => window.location.reload(), 1000)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao remover chave")
+    } finally {
+      setIsSavingGoogle(false)
+    }
   }
 
   return (
@@ -139,11 +247,18 @@ export function ApiKeysCard({
             </div>
             <Button
               onClick={handleMetaAdsUpdate}
-              disabled={!metaAdsKey.trim()}
+              disabled={isSavingMeta || (!metaAdsKey.trim() && !accountId.trim())}
               size="sm"
               className="cursor-pointer"
             >
-              {metaAdsConfigured ? "Update" : "Save"}
+              {isSavingMeta ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  Salvando...
+                </>
+              ) : (
+                metaAdsConfigured ? "Atualizar" : "Salvar"
+              )}
             </Button>
             {metaAdsConfigured && (
               <Button
@@ -151,8 +266,16 @@ export function ApiKeysCard({
                 variant="destructive"
                 size="sm"
                 className="cursor-pointer"
+                disabled={isSavingMeta}
               >
-                Remove
+                {isSavingMeta ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    Removendo...
+                  </>
+                ) : (
+                  "Remover"
+                )}
               </Button>
             )}
           </div>
@@ -161,11 +284,10 @@ export function ApiKeysCard({
           </p>
         </div>
 
-        {/* Warning */}
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg">
-          <p className="text-xs text-amber-900 dark:text-amber-100">
-            <strong>⚠️ Importante:</strong> As chaves são salvas imediatamente quando você clica em Salvar/Atualizar.
-            Certifique-se de testar suas integrações após atualizar as chaves.
+        {/* Info Notice */}
+        <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg">
+          <p className="text-xs text-green-900 dark:text-green-100">
+            <strong>✓ Salvamento Automático:</strong> As chaves são criptografadas e salvas no banco de dados imediatamente quando você clica em "Salvar" ou "Atualizar". A página será recarregada automaticamente após o salvamento.
           </p>
         </div>
       </CardContent>

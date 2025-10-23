@@ -20,9 +20,10 @@ export interface User {
 }
 
 // Whitelabel interface - contains only safe data for frontend
-// Sensitive fields (id, domain, encrypted keys, etc.) are excluded to prevent data leaks
+// Sensitive fields (id, encrypted keys, etc.) are excluded to prevent data leaks
 export interface Whitelabel {
   name: string
+  domain?: string
   brandColor?: string
   logoUrl?: string
   businessModel?: "TCV" | "MRR"

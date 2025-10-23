@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 import { AuthProvider } from "@/hooks/use-auth"
 import { ThemeProvider } from "@/hooks/use-theme"
+import { DynamicFavicon } from "@/components/dynamic-favicon"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={null}>
           <AuthProvider>
+            <DynamicFavicon />
             <ThemeProvider>{children}</ThemeProvider>
           </AuthProvider>
         </Suspense>
