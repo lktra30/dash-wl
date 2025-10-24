@@ -8,6 +8,7 @@ import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from 
 import { MainMetricsCards, calculateMainPageMetrics, TeamCompetition } from "@/components/mainPage"
 import { MeetingsGoalProgress, SalesGoalProgress } from "@/components/goals"
 import { MetaAdsMainCards, MetaAdsMonthlyChart } from "@/components/ads"
+import { SalesEvolutionChart } from "@/components/sales"
 import { SDRRanking } from "@/components/mainPage/sdr-ranking"
 import { CloserRanking } from "@/components/mainPage/closer-ranking"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +34,10 @@ export default function DashboardPage() {
   const [metaAdsMetrics, setMetaAdsMetrics] = useState<MetaAdsMetrics | null>(null)
   const [metaAdsTimeSeries, setMetaAdsTimeSeries] = useState<MetaAdsTimeSeriesData[]>([])
   const [isMetaAdsLoading, setIsMetaAdsLoading] = useState(true)
+
+  // Sales Evolution state
+  const [salesEvolutionData, setSalesEvolutionData] = useState<any[]>([])
+  const [isSalesEvolutionLoading, setIsSalesEvolutionLoading] = useState(true)
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -143,6 +148,39 @@ export default function DashboardPage() {
     loadMetaAdsData()
   }, [user, authLoading, dateRange])
 
+  // Load Sales Evolution data - Independent of date filter (last 12 months)
+  useEffect(() => {
+    const loadSalesEvolutionData = async () => {
+      if (authLoading || !user) return
+
+      setIsSalesEvolutionLoading(true)
+      try {
+        const response = await fetch("/api/dashboard/sales-evolution", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setSalesEvolutionData(data.data)
+          }
+        } else {
+          setSalesEvolutionData([])
+        }
+      } catch (error) {
+        setSalesEvolutionData([])
+        // Silently ignore errors
+      } finally {
+        setIsSalesEvolutionLoading(false)
+      }
+    }
+
+    loadSalesEvolutionData()
+  }, [user, authLoading])
+
   if (authLoading) {
     return (
       <DashboardLayout>
@@ -200,6 +238,15 @@ export default function DashboardPage() {
           ) : (
             <MainMetricsCards metrics={null as any} isLoading={true} brandColor={whitelabel.brandColor} />
           )}
+
+          {/* Sales Evolution Section */}
+          <div className="space-y-4">
+            <SalesEvolutionChart
+              data={salesEvolutionData}
+              brandColor={whitelabel.brandColor}
+              isLoading={isSalesEvolutionLoading}
+            />
+          </div>
 
           {/* Meta Ads Section */}
           <div className="space-y-4">

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, TrendingUp, Users, MousePointerClick, Target } from "lucide-react"
+import { DollarSign, TrendingUp, Users, MousePointerClick, Target, ArrowUpRight } from "lucide-react"
 import type { MetaAdsMetrics } from "@/lib/types"
 
 interface MetaAdsMainCardsProps {
@@ -14,8 +14,8 @@ interface MetaAdsMainCardsProps {
 export function MetaAdsMainCards({ metrics, isLoading = false, brandColor = "#6366f1", roas }: MetaAdsMainCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {[1, 2, 3, 4, 5].map((i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-24 bg-muted rounded" />
@@ -33,7 +33,7 @@ export function MetaAdsMainCards({ metrics, isLoading = false, brandColor = "#63
 
   if (!metrics) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card className="col-span-full">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
@@ -54,10 +54,19 @@ export function MetaAdsMainCards({ metrics, isLoading = false, brandColor = "#63
       color: brandColor,
     },
     {
-      title: "Investimento por Lead (CAC)",
+      title: "CPL (Custo por Lead)",
       value: `R$ ${metrics.cac.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: `Total investido / ${metrics.totalLeads} leads`,
       icon: Users,
+      color: brandColor,
+    },
+    {
+      title: "CAC (Custo por Aquisição)",
+      value: metrics.totalPurchases > 0
+        ? `R$ ${(metrics.totalSpend / metrics.totalPurchases).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "R$ 0,00",
+      description: `Total investido / ${metrics.totalPurchases} leads fechados`,
+      icon: Target,
       color: brandColor,
     },
     {
@@ -78,13 +87,13 @@ export function MetaAdsMainCards({ metrics, isLoading = false, brandColor = "#63
       title: "ROAS",
       value: roas ? `${roas.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x` : "0.0x",
       description: "Retorno sobre investimento em anúncios",
-      icon: Target,
+      icon: ArrowUpRight,
       color: brandColor,
     },
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
       {cardsConfig.map((card, index) => {
         const Icon = card.icon
         return (

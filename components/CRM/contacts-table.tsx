@@ -49,7 +49,7 @@ interface ContactsTableProps {
   dataService: any
 }
 
-type ColumnKey = "name" | "company" | "contact" | "sdrCloser" | "status" | "value" | "createdAt"
+type ColumnKey = "name" | "company" | "contact" | "sdrCloser" | "status" | "leadSource" | "value" | "createdAt"
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -66,6 +66,8 @@ const getStatusColor = (status: string) => {
       return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
     case "lost":
       return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+    case "disqualified":
+      return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
     default:
       return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
   }
@@ -87,6 +89,8 @@ const getStatusLabel = (status: string) => {
       return "Fechado"
     case "lost":
       return "Perdido"
+    case "disqualified":
+      return "Desqualificado"
     default:
       return status
   }
@@ -109,6 +113,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
     "contact",
     "sdrCloser",
     "status",
+    "leadSource",
     "value",
     "createdAt"
   ])
@@ -144,6 +149,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
     contact: "Contato",
     sdrCloser: "SDR / Closer",
     status: "Status",
+    leadSource: "Origem",
     value: "Valor",
     createdAt: "Data Criação"
   }
@@ -246,6 +252,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                 <SelectItem value="won">Ganho</SelectItem>
                 <SelectItem value="closed">Fechado</SelectItem>
                 <SelectItem value="lost">Perdido</SelectItem>
+                <SelectItem value="disqualified">Desqualificado</SelectItem>
               </SelectContent>
             </Select>
 
@@ -338,6 +345,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                     {visibleColumns.includes("contact") && <TableHead>Contato</TableHead>}
                     {visibleColumns.includes("sdrCloser") && <TableHead>SDR / Closer</TableHead>}
                     {visibleColumns.includes("status") && <TableHead>Status</TableHead>}
+                    {visibleColumns.includes("leadSource") && <TableHead>Origem</TableHead>}
                     {visibleColumns.includes("value") && <TableHead>Valor</TableHead>}
                     {visibleColumns.includes("createdAt") && (
                       <TableHead>
@@ -425,11 +433,29 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                         )}
                         {visibleColumns.includes("status") && (
                           <TableCell>
-                            <Badge 
+                            <Badge
                               className={getStatusColor(contact.status)}
                             >
                               {getStatusLabel(contact.status)}
                             </Badge>
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes("leadSource") && (
+                          <TableCell>
+                            {contact.leadSource ? (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  contact.leadSource === "inbound"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                    : "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800"
+                                }
+                              >
+                                {contact.leadSource === "inbound" ? "Inbound" : "Outbound"}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
                           </TableCell>
                         )}
                         {visibleColumns.includes("value") && (

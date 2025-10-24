@@ -49,6 +49,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
     phone: "",
     company: "",
     status: "new_lead" as Contact["status"],
+    leadSource: "" as "" | "inbound" | "outbound",
     sdrId: "",
     closerId: "",
   })
@@ -66,6 +67,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         phone: "",
         company: "",
         status: "new_lead",
+        leadSource: "",
         sdrId: "",
         closerId: "",
       })
@@ -90,15 +92,17 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validação: SDR e Closer são obrigatórios
-    if (!formData.sdrId || formData.sdrId === "") {
-      setError("Por favor, selecione um SDR. É obrigatório para realizar a venda.")
-      return
-    }
+    // Validação: SDR e Closer são obrigatórios apenas para vendas realizadas (status "won")
+    if (formData.status === "won") {
+      if (!formData.sdrId || formData.sdrId === "") {
+        setError("Por favor, selecione um SDR. É obrigatório para realizar a venda.")
+        return
+      }
 
-    if (!formData.closerId || formData.closerId === "") {
-      setError("Por favor, selecione um Closer. É obrigatório para realizar a venda.")
-      return
+      if (!formData.closerId || formData.closerId === "") {
+        setError("Por favor, selecione um Closer. É obrigatório para realizar a venda.")
+        return
+      }
     }
 
     if (!dataService) return
@@ -112,8 +116,9 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         phone: formData.phone || undefined,
         company: formData.company || undefined,
         status: formData.status,
-        sdrId: formData.sdrId,
-        closerId: formData.closerId,
+        leadSource: formData.leadSource || undefined,
+        sdrId: formData.sdrId || undefined,
+        closerId: formData.closerId || undefined,
       })
 
       // Reset form
@@ -123,6 +128,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         phone: "",
         company: "",
         status: "new_lead",
+        leadSource: "",
         sdrId: "",
         closerId: "",
       })
@@ -159,7 +165,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Adicionar Novo Contato</SheetTitle>
           <SheetDescription>
-            Insira as informações do contato abaixo. SDR e Closer são obrigatórios para realizar vendas.
+            Insira as informações do contato abaixo. SDR e Closer são obrigatórios apenas ao realizar vendas (status "Ganho").
           </SheetDescription>
         </SheetHeader>
 
@@ -187,7 +193,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
 
             <div className="space-y-3">
               <Label htmlFor="email" className="text-sm font-semibold">
-                Email <span className="text-destructive">*</span>
+                Email
               </Label>
               <Input
                 id="email"
@@ -196,7 +202,6 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 placeholder="john@example.com"
                 className="h-11 text-base"
-                required
               />
             </div>
 
@@ -239,19 +244,38 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new_lead">Novo Lead</SelectItem>
-                  <SelectItem value="contacted">Contatado</SelectItem>
-                  <SelectItem value="meeting">Reunião Agendada</SelectItem>
-                  <SelectItem value="negotiation">Negociação</SelectItem>
-                  <SelectItem value="won">Ganho</SelectItem>
-                  <SelectItem value="lost">Perdido</SelectItem>
+                  <SelectItem value="new_lead" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Novo Lead</SelectItem>
+                  <SelectItem value="contacted" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Contatado</SelectItem>
+                  <SelectItem value="meeting" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Reunião Agendada</SelectItem>
+                  <SelectItem value="negotiation" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Negociação</SelectItem>
+                  <SelectItem value="won" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Ganho</SelectItem>
+                  <SelectItem value="lost" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Perdido</SelectItem>
+                  <SelectItem value="disqualified" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Desqualificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="leadSource" className="text-sm font-semibold">
+                Origem do Lead
+              </Label>
+              <Select
+                value={formData.leadSource}
+                onValueChange={(value) => handleInputChange("leadSource", value)}
+              >
+                <SelectTrigger id="leadSource" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Inbound (Lead veio até nós)</SelectItem>
+                  <SelectItem value="outbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Outbound (Procuramos o lead)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-3">
               <Label htmlFor="sdr" className="text-sm font-semibold">
-                SDR (Sales Development Representative) <span className="text-destructive">*</span>
+                SDR (Sales Development Representative)
               </Label>
               <Select
                 value={formData.sdrId || ""}
@@ -296,7 +320,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
 
             <div className="space-y-3">
               <Label htmlFor="closer" className="text-sm font-semibold">
-                Closer (Account Executive) <span className="text-destructive">*</span>
+                Closer (Account Executive)
               </Label>
               <Select
                 value={formData.closerId || ""}

@@ -36,10 +36,11 @@ export interface Whitelabel {
 export interface Contact {
   id: string
   name: string
-  email: string
+  email?: string
   phone?: string
   company?: string
-  status: "new_lead" | "contacted" | "meeting" | "negotiation" | "won" | "closed" | "lost"
+  status: "new_lead" | "contacted" | "meeting" | "negotiation" | "won" | "closed" | "lost" | "disqualified"
+  leadSource?: "inbound" | "outbound" // Lead source: inbound (came to us) or outbound (we reached out)
   whitelabelId: string
   assignedTo?: string
   sdrId?: string // SDR (Sales Development Representative) responsible for this contact

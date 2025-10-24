@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,
       dealValue: contact.deal_value,
@@ -84,17 +85,19 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    // Validação: SDR e Closer são obrigatórios
-    if (!body.sdrId) {
-      return NextResponse.json({
-        error: "SDR é obrigatório. Por favor, selecione um SDR para realizar a venda."
-      }, { status: 400 })
-    }
+    // Validação: SDR e Closer são obrigatórios apenas para vendas realizadas (status "won")
+    if (body.status === "won") {
+      if (!body.sdrId) {
+        return NextResponse.json({
+          error: "SDR é obrigatório. Por favor, selecione um SDR para realizar a venda."
+        }, { status: 400 })
+      }
 
-    if (!body.closerId) {
-      return NextResponse.json({
-        error: "Closer é obrigatório. Por favor, selecione um Closer para realizar a venda."
-      }, { status: 400 })
+      if (!body.closerId) {
+        return NextResponse.json({
+          error: "Closer é obrigatório. Por favor, selecione um Closer para realizar a venda."
+        }, { status: 400 })
+      }
     }
 
     // Transform camelCase to database snake_case
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
       phone: body.phone,
       company: body.company,
       funnel_stage: body.status,
+      lead_source: body.leadSource,
       whitelabel_id: user.whitelabel_id,
       sdr_id: body.sdrId,
       closer_id: body.closerId,
@@ -129,6 +133,7 @@ export async function POST(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,
       sdrId: contact.sdr_id,
@@ -173,6 +178,21 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Contact ID is required" }, { status: 400 })
     }
 
+    // Validação: SDR e Closer são obrigatórios apenas para vendas realizadas (status "won")
+    if (updates.status === "won") {
+      if (!updates.sdrId) {
+        return NextResponse.json({
+          error: "SDR é obrigatório. Por favor, selecione um SDR para realizar a venda."
+        }, { status: 400 })
+      }
+
+      if (!updates.closerId) {
+        return NextResponse.json({
+          error: "Closer é obrigatório. Por favor, selecione um Closer para realizar a venda."
+        }, { status: 400 })
+      }
+    }
+
     // Transform camelCase to database snake_case
     const updateData: any = {}
     if (updates.name !== undefined) updateData.name = updates.name
@@ -180,6 +200,7 @@ export async function PATCH(request: NextRequest) {
     if (updates.phone !== undefined) updateData.phone = updates.phone
     if (updates.company !== undefined) updateData.company = updates.company
     if (updates.status !== undefined) updateData.funnel_stage = updates.status
+    if (updates.leadSource !== undefined) updateData.lead_source = updates.leadSource
     if (updates.dealValue !== undefined) updateData.deal_value = updates.dealValue
     if (updates.dealDuration !== undefined) updateData.deal_duration = updates.dealDuration
     if (updates.sdrId !== undefined) updateData.sdr_id = updates.sdrId
@@ -207,6 +228,7 @@ export async function PATCH(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,
       dealValue: contact.deal_value,

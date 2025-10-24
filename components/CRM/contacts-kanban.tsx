@@ -26,6 +26,7 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
     { id: "negotiation", title: "Negociação", status: "negotiation" as const },
     { id: "won", title: "Ganho", status: "won" as const },
     { id: "lost", title: "Perdido", status: "lost" as const },
+    { id: "disqualified", title: "Desqualificado", status: "disqualified" as const },
   ]
 
   const getContactsByStatus = (status: string) => {
@@ -65,7 +66,7 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
       {kanbanColumns.map((column) => {
         const isBeingDraggedOver = dragOverColumn === column.id
         const isDraggedFromHere = draggedContact?.status === column.status

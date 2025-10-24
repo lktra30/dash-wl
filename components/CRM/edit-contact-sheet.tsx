@@ -57,6 +57,7 @@ export function EditContactSheet({
     phone: contact.phone || "",
     company: contact.company || "",
     status: contact.status,
+    leadSource: (contact as any).leadSource || "",
     dealValue: contact.dealValue || 0,
     dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
     sdrId: (contact as any).sdrId || "",
@@ -93,6 +94,7 @@ export function EditContactSheet({
       phone: contact.phone || "",
       company: contact.company || "",
       status: contact.status,
+      leadSource: (contact as any).leadSource || "",
       dealValue: contact.dealValue || 0,
       dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
       sdrId: (contact as any).sdrId || "",
@@ -152,15 +154,17 @@ export function EditContactSheet({
       return
     }
 
-    // Validação: SDR e Closer são obrigatórios
-    if (!formData.sdrId || formData.sdrId === "") {
-      setError("Por favor, selecione um SDR. É obrigatório para realizar a venda.")
-      return
-    }
+    // Validação: SDR e Closer são obrigatórios apenas para vendas realizadas (status "won")
+    if (formData.status === "won") {
+      if (!formData.sdrId || formData.sdrId === "") {
+        setError("Por favor, selecione um SDR. É obrigatório para realizar a venda.")
+        return
+      }
 
-    if (!formData.closerId || formData.closerId === "") {
-      setError("Por favor, selecione um Closer. É obrigatório para realizar a venda.")
-      return
+      if (!formData.closerId || formData.closerId === "") {
+        setError("Por favor, selecione um Closer. É obrigatório para realizar a venda.")
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -173,10 +177,11 @@ export function EditContactSheet({
         phone: formData.phone || undefined,
         company: formData.company || undefined,
         status: formData.status,
+        leadSource: formData.leadSource || undefined,
         dealValue: (formData.status === "won" || formData.status === "lost") ? formData.dealValue : undefined,
         dealDuration: (formData.status === "won" || formData.status === "lost") ? (formData.dealDuration) : undefined,
-        sdrId: formData.sdrId,
-        closerId: formData.closerId,
+        sdrId: formData.sdrId || undefined,
+        closerId: formData.closerId || undefined,
       })
 
       // Close sheet
@@ -203,7 +208,7 @@ export function EditContactSheet({
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Editar Contato</SheetTitle>
           <SheetDescription>
-            Atualize as informações do contato abaixo. SDR e Closer são obrigatórios para realizar vendas.
+            Atualize as informações do contato abaixo. SDR e Closer são obrigatórios apenas ao realizar vendas (status "Ganho").
           </SheetDescription>
         </SheetHeader>
 
@@ -231,7 +236,7 @@ export function EditContactSheet({
 
             <div className="space-y-3">
               <Label htmlFor="edit-email" className="text-sm font-semibold">
-                Email <span className="text-destructive">*</span>
+                Email
               </Label>
               <Input
                 id="edit-email"
@@ -240,7 +245,6 @@ export function EditContactSheet({
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 placeholder="john@example.com"
                 className="h-11 text-base"
-                required
               />
             </div>
 
@@ -283,19 +287,38 @@ export function EditContactSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new_lead">Novo Lead</SelectItem>
-                  <SelectItem value="contacted">Contactado</SelectItem>
-                  <SelectItem value="meeting">Reunião Agendada</SelectItem>
-                  <SelectItem value="negotiation">Negociação</SelectItem>
-                  <SelectItem value="won">Ganho</SelectItem>
-                  <SelectItem value="lost">Perdido</SelectItem>
+                  <SelectItem value="new_lead" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Novo Lead</SelectItem>
+                  <SelectItem value="contacted" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Contactado</SelectItem>
+                  <SelectItem value="meeting" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Reunião Agendada</SelectItem>
+                  <SelectItem value="negotiation" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Negociação</SelectItem>
+                  <SelectItem value="won" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Ganho</SelectItem>
+                  <SelectItem value="lost" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Perdido</SelectItem>
+                  <SelectItem value="disqualified" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Desqualificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="edit-leadSource" className="text-sm font-semibold">
+                Origem do Lead
+              </Label>
+              <Select
+                value={formData.leadSource}
+                onValueChange={(value) => handleInputChange("leadSource", value)}
+              >
+                <SelectTrigger id="edit-leadSource" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Inbound (Lead veio até nós)</SelectItem>
+                  <SelectItem value="outbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Outbound (Procuramos o lead)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-3">
               <Label htmlFor="edit-sdr" className="text-sm font-semibold">
-                SDR (Sales Development Representative) <span className="text-destructive">*</span>
+                SDR (Sales Development Representative)
               </Label>
               <Select
                 value={formData.sdrId || ""}
@@ -340,7 +363,7 @@ export function EditContactSheet({
 
             <div className="space-y-3">
               <Label htmlFor="edit-closer" className="text-sm font-semibold">
-                Closer (Account Executive) <span className="text-destructive">*</span>
+                Closer (Account Executive)
               </Label>
               <Select
                 value={formData.closerId || ""}
