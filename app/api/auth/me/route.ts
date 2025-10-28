@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
     // API key status (boolean only, never the actual keys)
     metaAdsConfigured: !!whitelabel.meta_ads_key_encrypted,
     googleAdsConfigured: !!whitelabel.google_ads_key_encrypted,
+    facebookConfigured: !!whitelabel.facebook_access_token_encrypted,
     metaAdsAccountId: whitelabel.meta_ads_account_id,
+    facebookPageId: whitelabel.facebook_page_id,
     teamCompetition: whitelabel.team_competition || false,
     // Explicitly exclude: id, created_at, updated_at, encrypted keys
   }

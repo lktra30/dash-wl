@@ -16,18 +16,18 @@ export function AdminSettingsCard({ whitelabelName, onWhitelabelNameChange }: Ad
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          Admin Settings
+          Configurações de Administrador
         </CardTitle>
-        <CardDescription>Configure your whitelabel CRM instance</CardDescription>
+        <CardDescription>Configure sua instância de CRM whitelabel</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label htmlFor="whitelabel-name">Dashboard Name</Label>
+          <Label htmlFor="whitelabel-name">Nome do Dashboard</Label>
           <Input
             id="whitelabel-name"
             value={whitelabelName}
             onChange={(e) => onWhitelabelNameChange(e.target.value)}
-            placeholder="Enter your dashboard name"
+            placeholder="Digite o nome do seu dashboard"
           />
         </div>
       </CardContent>

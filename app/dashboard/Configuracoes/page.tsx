@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Failed to save settings")
+        throw new Error(error.error || "Falha ao salvar configurações")
       }
 
       // Update the brand color in the theme
@@ -76,7 +76,7 @@ export default function SettingsPage() {
       // Reload to get updated whitelabel data
       window.location.reload()
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to save settings")
+      alert(error instanceof Error ? error.message : "Falha ao salvar configurações")
     } finally {
       setIsSaving(false)
     }
@@ -99,7 +99,9 @@ export default function SettingsPage() {
                   <ApiKeysCard
                     metaAdsConfigured={whitelabel.metaAdsConfigured || false}
                     googleAdsConfigured={whitelabel.googleAdsConfigured || false}
+                    facebookConfigured={whitelabel.facebookConfigured || false}
                     metaAdsAccountId={metaAdsAccountId}
+                    facebookPageId={whitelabel.facebookPageId}
                     onMetaAdsKeyChange={setMetaAdsKey}
                     onGoogleAdsKeyChange={setGoogleAdsKey}
                     onMetaAdsAccountIdChange={setMetaAdsAccountId}

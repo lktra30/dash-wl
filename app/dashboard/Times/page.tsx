@@ -74,7 +74,7 @@ export default function TeamsPage() {
   const fetchTeams = useCallback(async () => {
     try {
       const response = await fetch("/api/dashboard/teams")
-      if (!response.ok) throw new Error("Failed to fetch teams")
+      if (!response.ok) throw new Error("Falha ao buscar equipes")
       const data = await response.json()
       setTeams(data)
     } catch (error) {
@@ -86,7 +86,7 @@ export default function TeamsPage() {
   const fetchUsers = async () => {
     try {
       const response = await fetch("/api/dashboard/users")
-      if (!response.ok) throw new Error("Failed to fetch users")
+      if (!response.ok) throw new Error("Falha ao buscar usuários")
       const data = await response.json()
       setAllUsers(data)
     } catch (error) {
@@ -98,7 +98,7 @@ export default function TeamsPage() {
   const fetchEmployees = async () => {
     try {
       const response = await fetch("/api/dashboard/employees?status=active")
-      if (!response.ok) throw new Error("Failed to fetch employees")
+      if (!response.ok) throw new Error("Falha ao buscar colaboradores")
       const data = await response.json()
       setAllEmployees(data)
     } catch (error) {

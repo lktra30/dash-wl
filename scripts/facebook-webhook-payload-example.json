@@ -1,0 +1,88 @@
+{
+  "// EXEMPLO 1: Payload do webhook (o que o Facebook envia para /api/webhooks/facebook)": "",
+  "object": "page",
+  "entry": [
+    {
+      "id": "123456789012345",
+      "time": 1234567890,
+      "changes": [
+        {
+          "field": "leadgen",
+          "value": {
+            "leadgen_id": "987654321098765",
+            "page_id": "123456789012345",
+            "form_id": "456789012345678",
+            "ad_id": "321098765432109",
+            "created_time": 1234567890
+          }
+        }
+      ]
+    }
+  ],
+
+  "// EXEMPLO 2: Dados do lead (o que a API do Facebook retorna quando buscamos pelo leadgen_id)": "",
+  "exemplo_resposta_api_facebook": {
+    "id": "987654321098765",
+    "created_time": "2024-01-15T10:30:45+0000",
+    "field_data": [
+      {
+        "name": "full_name",
+        "values": ["João da Silva"]
+      },
+      {
+        "name": "email",
+        "values": ["joao.silva@example.com"]
+      },
+      {
+        "name": "phone",
+        "values": ["11999999999"]
+      },
+      {
+        "name": "company",
+        "values": ["Empresa XYZ"]
+      }
+    ]
+  },
+
+  "// EXEMPLO 3: Variações de nomes de campos (nosso código detecta automaticamente)": "",
+  "variacoes_aceitas": {
+    "nome": ["full_name", "nome_completo", "nome", "name"],
+    "email": ["email", "e-mail"],
+    "telefone": ["phone", "telefone", "celular", "whatsapp"],
+    "empresa": ["company", "empresa", "company_name"]
+  },
+
+  "// EXEMPLO 4: Como fica salvo no banco (tabela contacts)": "",
+  "contact_criado": {
+    "id": "uuid-gerado-automaticamente",
+    "whitelabel_id": "uuid-do-whitelabel",
+    "name": "João da Silva",
+    "email": "joao.silva@example.com",
+    "phone": "11999999999",
+    "company": "Empresa XYZ",
+    "funnel_stage": "new_lead",
+    "lead_source": "inbound",
+    "created_at": "2024-01-15T10:30:45.000Z"
+  },
+
+  "// EXEMPLO 5: Como fica salvo no banco (tabela facebook_leads para auditoria)": "",
+  "facebook_lead_criado": {
+    "id": "uuid-gerado-automaticamente",
+    "whitelabel_id": "uuid-do-whitelabel",
+    "contact_id": "uuid-do-contact-criado",
+    "facebook_lead_id": "987654321098765",
+    "page_id": "123456789012345",
+    "form_id": "456789012345678",
+    "ad_id": "321098765432109",
+    "form_data": {
+      "full_name": "João da Silva",
+      "email": "joao.silva@example.com",
+      "phone": "11999999999",
+      "company": "Empresa XYZ"
+    },
+    "processed": true,
+    "error_message": null,
+    "created_at": "2024-01-15T10:30:45.000Z",
+    "processed_at": "2024-01-15T10:30:46.000Z"
+  }
+}

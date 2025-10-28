@@ -15,9 +15,9 @@ export function BusinessModelCard({ businessModel, onBusinessModelChange }: Busi
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" />
-          Business Model
+          Modelo de Negócio
         </CardTitle>
-        <CardDescription>Select your preferred revenue tracking model</CardDescription>
+        <CardDescription>Selecione seu modelo preferido de acompanhamento de receita</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -47,7 +47,7 @@ export function BusinessModelCard({ businessModel, onBusinessModelChange }: Busi
               <Label className="font-semibold cursor-pointer">MRR</Label>
             </div>
             <p className="text-sm text-muted-foreground">
-              Monthly Recurring Revenue - Track subscription-based revenue month over month
+              Receita Recorrente Mensal - Acompanhe receita baseada em assinatura mês a mês
             </p>
           </div>
 
@@ -77,14 +77,14 @@ export function BusinessModelCard({ businessModel, onBusinessModelChange }: Busi
               <Label className="font-semibold cursor-pointer">TCV</Label>
             </div>
             <p className="text-sm text-muted-foreground">
-              Total Contract Value - Track the full value of contracts over their lifetime
+              Valor Total do Contrato - Acompanhe o valor total dos contratos durante toda sua vigência
             </p>
           </div>
         </div>
 
         <div className="p-3 bg-muted/50 rounded-lg">
           <p className="text-xs text-muted-foreground">
-            <strong>Note:</strong> This setting affects how revenue metrics are calculated across your dashboard.
+            <strong>Nota:</strong> Esta configuração afeta como as métricas de receita são calculadas em todo o seu dashboard.
           </p>
         </div>
       </CardContent>

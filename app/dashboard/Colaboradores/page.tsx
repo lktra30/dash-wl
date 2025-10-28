@@ -58,7 +58,7 @@ export default function EmployeesPage() {
     setIsLoading(true)
     try {
       const response = await fetch("/api/dashboard/employees")
-      if (!response.ok) throw new Error("Failed to fetch employees")
+      if (!response.ok) throw new Error("Falha ao buscar colaboradores")
       const data = await response.json()
       setEmployees(data)
     } catch (error) {
@@ -97,7 +97,7 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Failed to create employee")
+        throw new Error(error.error || "Falha ao criar colaborador")
       }
 
       await loadEmployees()
@@ -136,7 +136,7 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Failed to update employee")
+        throw new Error(error.error || "Falha ao atualizar colaborador")
       }
 
       await loadEmployees()
@@ -155,7 +155,7 @@ export default function EmployeesPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Failed to delete employee")
+        throw new Error(error.error || "Falha ao excluir colaborador")
       }
 
       await loadEmployees()

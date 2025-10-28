@@ -59,6 +59,8 @@ export async function PUT(request: NextRequest) {
     metaAdsKey?: string
     googleAdsKey?: string
     metaAdsAccountId?: string
+    facebookAccessToken?: string
+    facebookPageId?: string
   }
 
   try {
@@ -90,6 +92,7 @@ export async function PUT(request: NextRequest) {
   if (body.brandColor !== undefined) updateData.brand_color = body.brandColor
   if (body.businessModel !== undefined) updateData.business_model = body.businessModel
   if (body.metaAdsAccountId !== undefined) updateData.meta_ads_account_id = body.metaAdsAccountId || null
+  if (body.facebookPageId !== undefined) updateData.facebook_page_id = body.facebookPageId || null
 
   // Encrypt API keys if provided
   if (body.metaAdsKey !== undefined) {
@@ -139,6 +142,30 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  if (body.facebookAccessToken !== undefined) {
+    if (!isEncryptionConfigured()) {
+      const errorResponse = NextResponse.json(
+        { error: "Encryption not configured. Please set ENCRYPTION_KEY environment variable." },
+        { status: 500 }
+      )
+      applySupabaseCookies(intermediateResponse, errorResponse)
+      return errorResponse
+    }
+
+    try {
+      // Only encrypt if not empty, otherwise set to null to remove key
+      updateData.facebook_access_token_encrypted = body.facebookAccessToken ? encrypt(body.facebookAccessToken) : null
+    } catch (error) {
+      console.error("[Facebook Access Token Encryption Error]", error)
+      const errorResponse = NextResponse.json(
+        { error: "Failed to encrypt Facebook access token" },
+        { status: 500 }
+      )
+      applySupabaseCookies(intermediateResponse, errorResponse)
+      return errorResponse
+    }
+  }
+
   // Update whitelabel in database
   const { data: updatedWhitelabel, error: updateError } = await supabase
     .from("whitelabels")
@@ -167,7 +194,9 @@ export async function PUT(request: NextRequest) {
       businessModel: updatedWhitelabel.business_model,
       metaAdsConfigured: !!updatedWhitelabel.meta_ads_key_encrypted,
       googleAdsConfigured: !!updatedWhitelabel.google_ads_key_encrypted,
+      facebookConfigured: !!updatedWhitelabel.facebook_access_token_encrypted,
       metaAdsAccountId: updatedWhitelabel.meta_ads_account_id,
+      facebookPageId: updatedWhitelabel.facebook_page_id,
     },
   })
   applySupabaseCookies(intermediateResponse, successResponse)

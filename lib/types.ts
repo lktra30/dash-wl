@@ -29,7 +29,9 @@ export interface Whitelabel {
   businessModel?: "TCV" | "MRR"
   metaAdsConfigured?: boolean
   googleAdsConfigured?: boolean
+  facebookConfigured?: boolean
   metaAdsAccountId?: string
+  facebookPageId?: string
   teamCompetition?: boolean
 }
 
@@ -367,4 +369,38 @@ export interface CommissionOverview {
     commission: number
     achievement: number
   }>
+}
+
+// Facebook Lead Ads Webhook Types
+export interface FacebookWebhookPayload {
+  object: string
+  entry: Array<{
+    id: string
+    time: number
+    changes: Array<{
+      field: string
+      value: {
+        leadgen_id: string
+        page_id: string
+        form_id: string
+        ad_id?: string
+        created_time: number
+      }
+    }>
+  }>
+}
+
+export interface FacebookLead {
+  id: string
+  whitelabelId: string
+  contactId?: string
+  facebookLeadId: string
+  pageId: string
+  formId: string
+  adId?: string
+  formData: Record<string, any>
+  processed: boolean
+  errorMessage?: string
+  createdAt: string
+  processedAt?: string
 }

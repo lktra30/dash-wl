@@ -9,16 +9,16 @@ export function AdminAccessRequired() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          Admin Settings
+          Configurações de Administrador
         </CardTitle>
-        <CardDescription>Configure your whitelabel CRM instance</CardDescription>
+        <CardDescription>Configure sua instância de CRM whitelabel</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="text-center py-8">
           <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Admin Access Required</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">Acesso de Administrador Necessário</h3>
           <p className="text-muted-foreground">
-            Only administrators can modify whitelabel settings and brand customization.
+            Apenas administradores podem modificar as configurações de whitelabel e personalização de marca.
           </p>
         </div>
       </CardContent>
