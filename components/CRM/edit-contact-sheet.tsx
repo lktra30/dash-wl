@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useTheme } from "@/hooks/use-theme"
-import type { Contact } from "@/lib/types"
+import type { Contact, PipelineWithStages, PipelineStage } from "@/lib/types"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -49,6 +49,8 @@ export function EditContactSheet({
   const { brandColor } = useTheme()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [employees, setEmployees] = React.useState<Employee[]>([])
+  const [pipelines, setPipelines] = React.useState<PipelineWithStages[]>([])
+  const [selectedPipeline, setSelectedPipeline] = React.useState<PipelineWithStages | null>(null)
   const [error, setError] = React.useState<string>("")
   const [previousStatus, setPreviousStatus] = React.useState(contact.status)
   const [formData, setFormData] = React.useState({
@@ -56,6 +58,8 @@ export function EditContactSheet({
     email: contact.email,
     phone: contact.phone || "",
     company: contact.company || "",
+    pipelineId: (contact as any).pipelineId || "",
+    stageId: (contact as any).stageId || "",
     status: contact.status,
     leadSource: (contact as any).leadSource || "",
     dealValue: contact.dealValue || 0,
@@ -64,10 +68,11 @@ export function EditContactSheet({
     closerId: (contact as any).closerId || "",
   })
 
-  // Load employees when sheet opens
+  // Load employees and pipelines when sheet opens
   React.useEffect(() => {
     if (open) {
       loadEmployees()
+      loadPipelines()
       setError("") // Clear any previous errors
     }
   }, [open])
@@ -86,6 +91,26 @@ export function EditContactSheet({
     }
   }
 
+  const loadPipelines = async () => {
+    try {
+      const response = await fetch('/api/dashboard/pipelines')
+      if (response.ok) {
+        const data = await response.json()
+        setPipelines(data)
+
+        // Set the contact's current pipeline as selected
+        if (contact.pipelineId) {
+          const contactPipeline = data.find((p: PipelineWithStages) => p.id === contact.pipelineId)
+          if (contactPipeline) {
+            setSelectedPipeline(contactPipeline)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar pipelines:', error)
+    }
+  }
+
   // Update form when contact changes
   React.useEffect(() => {
     setFormData({
@@ -93,6 +118,8 @@ export function EditContactSheet({
       email: contact.email,
       phone: contact.phone || "",
       company: contact.company || "",
+      pipelineId: (contact as any).pipelineId || "",
+      stageId: (contact as any).stageId || "",
       status: contact.status,
       leadSource: (contact as any).leadSource || "",
       dealValue: contact.dealValue || 0,
@@ -101,7 +128,25 @@ export function EditContactSheet({
       closerId: (contact as any).closerId || "",
     })
     setPreviousStatus(contact.status)
-  }, [contact])
+
+    // Update selected pipeline when contact changes
+    if ((contact as any).pipelineId && pipelines.length > 0) {
+      const contactPipeline = pipelines.find((p: PipelineWithStages) => p.id === (contact as any).pipelineId)
+      if (contactPipeline) {
+        setSelectedPipeline(contactPipeline)
+      }
+    }
+  }, [contact, pipelines])
+
+  const handlePipelineChange = (pipelineId: string) => {
+    const pipeline = pipelines.find(p => p.id === pipelineId)
+    setSelectedPipeline(pipeline || null)
+    setFormData(prev => ({
+      ...prev,
+      pipelineId,
+      stageId: pipeline?.stages[0]?.id || "",
+    }))
+  }
 
   // Show toast when status changes to "won"
   React.useEffect(() => {
@@ -149,6 +194,26 @@ export function EditContactSheet({
 
     if (!dataService) return
 
+    // Validação: Pipeline e Stage são obrigatórios
+    if (!formData.pipelineId || !formData.stageId) {
+      setError("Por favor, selecione um pipeline e um estágio.")
+      return
+    }
+
+    // Verificar requisitos do stage selecionado
+    const currentStage = selectedPipeline?.stages.find(s => s.id === formData.stageId)
+    if (currentStage) {
+      if (currentStage.requiresSdr && (!formData.sdrId || formData.sdrId === "")) {
+        setError(`O estágio "${currentStage.name}" requer que um SDR seja selecionado.`)
+        return
+      }
+
+      if (currentStage.requiresCloser && (!formData.closerId || formData.closerId === "")) {
+        setError(`O estágio "${currentStage.name}" requer que um Closer seja selecionado.`)
+        return
+      }
+    }
+
     // Validate won status before submitting
     if (!validateWonStatus()) {
       return
@@ -176,6 +241,8 @@ export function EditContactSheet({
         email: formData.email,
         phone: formData.phone || undefined,
         company: formData.company || undefined,
+        pipelineId: formData.pipelineId,
+        stageId: formData.stageId,
         status: formData.status,
         leadSource: formData.leadSource || undefined,
         dealValue: (formData.status === "won" || formData.status === "lost") ? formData.dealValue : undefined,
@@ -208,7 +275,7 @@ export function EditContactSheet({
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Editar Contato</SheetTitle>
           <SheetDescription>
-            Atualize as informações do contato abaixo. SDR e Closer são obrigatórios apenas ao realizar vendas (status "Ganho").
+            Atualize as informações do contato abaixo. Selecione o pipeline e estágio apropriados. Alguns estágios podem exigir SDR ou Closer.
           </SheetDescription>
         </SheetHeader>
 
@@ -276,24 +343,69 @@ export function EditContactSheet({
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="edit-status" className="text-sm font-semibold">
-                Status <span className="text-destructive">*</span>
+              <Label htmlFor="edit-pipeline" className="text-sm font-semibold">
+                Pipeline <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange("status", value)}
+                value={formData.pipelineId}
+                onValueChange={handlePipelineChange}
               >
-                <SelectTrigger id="edit-status" className="h-11 cursor-pointer">
-                  <SelectValue />
+                <SelectTrigger id="edit-pipeline" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione um pipeline" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new_lead" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Novo Lead</SelectItem>
-                  <SelectItem value="contacted" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Contactado</SelectItem>
-                  <SelectItem value="meeting" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Reunião Agendada</SelectItem>
-                  <SelectItem value="negotiation" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Negociação</SelectItem>
-                  <SelectItem value="won" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Ganho</SelectItem>
-                  <SelectItem value="lost" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Perdido</SelectItem>
-                  <SelectItem value="disqualified" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Desqualificado</SelectItem>
+                  {pipelines.length === 0 ? (
+                    <SelectItem value="no-pipelines" disabled>
+                      Nenhum pipeline configurado
+                    </SelectItem>
+                  ) : (
+                    pipelines.map(pipeline => (
+                      <SelectItem key={pipeline.id} value={pipeline.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pipeline.color }} />
+                          {pipeline.name}
+                          {pipeline.isDefault && <span className="text-xs text-muted-foreground">(Padrão)</span>}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="edit-stage" className="text-sm font-semibold">
+                Estágio <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.stageId}
+                onValueChange={(value) => handleInputChange("stageId", value)}
+                disabled={!selectedPipeline}
+              >
+                <SelectTrigger id="edit-stage" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione um estágio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!selectedPipeline ? (
+                    <SelectItem value="no-pipeline" disabled>
+                      Selecione um pipeline primeiro
+                    </SelectItem>
+                  ) : selectedPipeline.stages.length === 0 ? (
+                    <SelectItem value="no-stages" disabled>
+                      Este pipeline não tem estágios configurados
+                    </SelectItem>
+                  ) : (
+                    selectedPipeline.stages.map(stage => (
+                      <SelectItem key={stage.id} value={stage.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+                          {stage.name}
+                          {stage.countsAsMeeting && <span className="text-xs text-muted-foreground">(Reunião)</span>}
+                          {stage.countsAsSale && <span className="text-xs text-muted-foreground">(Venda)</span>}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

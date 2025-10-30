@@ -49,6 +49,8 @@ export interface Contact {
   closerId?: string // Closer/Account Executive responsible for closing this deal
   dealValue?: number // Expected deal value when contact is closed
   dealDuration?: number // Expected duration of the deal in days
+  pipelineId?: string // Pipeline this contact belongs to
+  stageId?: string // Current stage/status in the pipeline
   createdAt: string
   updatedAt: string
 }
@@ -403,4 +405,84 @@ export interface FacebookLead {
   errorMessage?: string
   createdAt: string
   processedAt?: string
+}
+
+// Pipeline Types
+export interface Pipeline {
+  id: string
+  whitelabelId: string
+  name: string
+  description?: string
+  isDefault: boolean
+  color: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PipelineStage {
+  id: string
+  pipelineId: string
+  name: string
+  description?: string
+  orderPosition: number
+  color: string
+
+  // Accounting configurations
+  countsAsMeeting: boolean // If true, contacts in this stage count as a meeting held
+  countsAsSale: boolean // If true, contacts in this stage count as a sale closed
+  requiresSdr: boolean // If true, requires an SDR to be assigned
+  requiresCloser: boolean // If true, requires a Closer to be assigned
+  requiresDealValue: boolean // If true, requires deal value to be filled
+
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PipelineWithStages extends Pipeline {
+  stages: PipelineStage[]
+}
+
+// Leads Evolution Types
+export interface LeadsEvolutionData {
+  date: string // Format: "YYYY-MM" (e.g., "2025-01")
+  meetings: number // Count of contacts that reached meeting stages
+  sales: number // Count of contacts that reached sale stages
+}
+
+// Pipeline Metrics Types
+export interface PipelineFunnelStage {
+  stageId: string
+  stageName: string
+  stageColor: string
+  count: number
+  conversionFromPrevious?: number // Conversion rate from previous stage (%)
+  countsAsMeeting: boolean
+  countsAsSale: boolean
+}
+
+export interface PipelineMetrics {
+  pipelineId: string
+  name: string
+  color: string
+  metrics: {
+    meetingRate: number // Percentage of contacts that reached meeting stages
+    finalConversion: number // Percentage of contacts that reached sale stages
+    meetingsPerSale: number // Average number of meetings per sale
+    totalContacts: number
+    totalMeetings: number
+    totalSales: number
+  }
+  funnel: PipelineFunnelStage[]
+}
+
+// Aggregated Goal Data (cross-pipeline)
+export interface AggregatedGoalData {
+  totalMeetings: number
+  totalSales: number
+  dailyMeetings: number
+  dailySales: number
+  weeklyMeetings: number
+  weeklySales: number
+  monthlyMeetings: number
+  monthlySales: number
 }

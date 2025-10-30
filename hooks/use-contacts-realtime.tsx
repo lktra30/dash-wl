@@ -5,6 +5,27 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Contact } from "@/lib/types"
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js"
 
+// Transform database snake_case to camelCase
+const transformContact = (dbContact: any): Contact => ({
+  id: dbContact.id,
+  name: dbContact.name,
+  email: dbContact.email,
+  phone: dbContact.phone,
+  company: dbContact.company,
+  status: dbContact.funnel_stage || dbContact.status,
+  pipelineId: dbContact.pipeline_id || dbContact.pipelineId,
+  stageId: dbContact.stage_id || dbContact.stageId,
+  leadSource: dbContact.lead_source || dbContact.leadSource,
+  whitelabelId: dbContact.whitelabel_id || dbContact.whitelabelId,
+  assignedTo: dbContact.assigned_to || dbContact.assignedTo,
+  dealValue: dbContact.deal_value || dbContact.dealValue,
+  dealDuration: dbContact.deal_duration || dbContact.dealDuration,
+  sdrId: dbContact.sdr_id || dbContact.sdrId,
+  closerId: dbContact.closer_id || dbContact.closerId,
+  createdAt: dbContact.created_at || dbContact.createdAt,
+  updatedAt: dbContact.updated_at || dbContact.updatedAt,
+})
+
 export function useContactsRealtime(initialContacts: Contact[] = []) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts)
   const [isLoading, setIsLoading] = useState(false)
@@ -35,7 +56,7 @@ export function useContactsRealtime(initialContacts: Contact[] = []) {
             (payload: RealtimePostgresChangesPayload<Contact>) => {
 
               if (payload.eventType === "INSERT") {
-                const newContact = payload.new as Contact
+                const newContact = transformContact(payload.new)
                 setContacts((prev) => {
                   // Check if contact already exists to avoid duplicates
                   if (prev.some((c) => c.id === newContact.id)) {
@@ -44,14 +65,14 @@ export function useContactsRealtime(initialContacts: Contact[] = []) {
                   return [...prev, newContact]
                 })
               } else if (payload.eventType === "UPDATE") {
-                const updatedContact = payload.new as Contact
+                const updatedContact = transformContact(payload.new)
                 setContacts((prev) =>
                   prev.map((contact) =>
                     contact.id === updatedContact.id ? updatedContact : contact
                   )
                 )
               } else if (payload.eventType === "DELETE") {
-                const deletedContact = payload.old as Contact
+                const deletedContact = payload.old as any
                 setContacts((prev) =>
                   prev.filter((contact) => contact.id !== deletedContact.id)
                 )

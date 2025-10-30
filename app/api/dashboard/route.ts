@@ -17,11 +17,20 @@ export async function GET(request: NextRequest) {
     const [
       { count: totalContacts },
       { data: contacts },
+      { data: allContactsForMetrics },
       { data: dealsRaw, count: totalDeals },
       { data: teams }
     ] = await Promise.all([
       supabase.from("contacts").select("*", { count: "exact", head: true }).eq("whitelabel_id", whitelabelId),
       supabase.from("contacts").select("*").eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false }).limit(5),
+      supabase.from("contacts").select(`
+        id,
+        funnel_stage,
+        pipeline_stages!stage_id (
+          counts_as_meeting,
+          counts_as_sale
+        )
+      `).eq("whitelabel_id", whitelabelId),
       supabase.from("deals").select("*", { count: "exact" }).eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false }),
       supabase.from("teams").select(`
         *,
@@ -50,11 +59,32 @@ export async function GET(request: NextRequest) {
     const totalRevenue = deals?.filter((d) => d.status === "won").reduce((sum, d) => sum + Number(d.value), 0) || 0
     const pipelineValue = deals?.filter((d) => d.status === "open").reduce((sum, d) => sum + Number(d.value), 0) || 0
 
+    // Calculate aggregated meetings and sales across all pipelines
+    // Note: All sales should count as meetings, but not all meetings are sales
+    const totalMeetings = (allContactsForMetrics || []).filter((contact: any) => {
+      return (
+        contact.pipeline_stages?.counts_as_meeting === true ||
+        contact.pipeline_stages?.counts_as_sale === true ||
+        contact.funnel_stage === 'meeting' ||
+        contact.funnel_stage === 'reuniao' ||
+        contact.funnel_stage === 'won'
+      )
+    }).length
+
+    const totalSales = (allContactsForMetrics || []).filter((contact: any) => {
+      return (
+        contact.pipeline_stages?.counts_as_sale === true ||
+        contact.funnel_stage === 'won'
+      )
+    }).length
+
     const analytics = {
       totalContacts: totalContacts || 0,
       totalDeals: totalDeals || 0,
       totalRevenue,
       pipelineValue,
+      totalMeetings,
+      totalSales,
     }
 
     // Calculate team stats

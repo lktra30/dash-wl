@@ -23,7 +23,7 @@ import {
 import { Plus, AlertCircle } from "lucide-react"
 import { useTheme } from "@/hooks/use-theme"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { Contact } from "@/lib/types"
+import type { Contact, PipelineWithStages, PipelineStage } from "@/lib/types"
 
 interface Employee {
   id: string
@@ -42,22 +42,27 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
   const [open, setOpen] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [employees, setEmployees] = React.useState<Employee[]>([])
+  const [pipelines, setPipelines] = React.useState<PipelineWithStages[]>([])
+  const [selectedPipeline, setSelectedPipeline] = React.useState<PipelineWithStages | null>(null)
   const [error, setError] = React.useState<string>("")
   const [formData, setFormData] = React.useState({
     name: "",
     email: "",
     phone: "",
     company: "",
+    pipelineId: "",
+    stageId: "",
     status: "new_lead" as Contact["status"],
     leadSource: "" as "" | "inbound" | "outbound",
     sdrId: "",
     closerId: "",
   })
 
-  // Load employees when sheet opens
+  // Load employees and pipelines when sheet opens
   React.useEffect(() => {
     if (open) {
       loadEmployees()
+      loadPipelines()
       setError("") // Clear any previous errors
     } else {
       // Reset form when closing
@@ -66,11 +71,14 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         email: "",
         phone: "",
         company: "",
+        pipelineId: "",
+        stageId: "",
         status: "new_lead",
         leadSource: "",
         sdrId: "",
         closerId: "",
       })
+      setSelectedPipeline(null)
       setError("")
     }
   }, [open])
@@ -89,18 +97,59 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
     }
   }
 
+  const loadPipelines = async () => {
+    try {
+      const response = await fetch('/api/dashboard/pipelines')
+      if (response.ok) {
+        const data = await response.json()
+        setPipelines(data)
+
+        // Selecionar pipeline padrão automaticamente
+        const defaultPipeline = data.find((p: PipelineWithStages) => p.isDefault)
+        if (defaultPipeline) {
+          setSelectedPipeline(defaultPipeline)
+          setFormData(prev => ({
+            ...prev,
+            pipelineId: defaultPipeline.id,
+            // Selecionar primeiro stage por padrão
+            stageId: defaultPipeline.stages[0]?.id || "",
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar pipelines:', error)
+    }
+  }
+
+  const handlePipelineChange = (pipelineId: string) => {
+    const pipeline = pipelines.find(p => p.id === pipelineId)
+    setSelectedPipeline(pipeline || null)
+    setFormData(prev => ({
+      ...prev,
+      pipelineId,
+      stageId: pipeline?.stages[0]?.id || "",
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validação: SDR e Closer são obrigatórios apenas para vendas realizadas (status "won")
-    if (formData.status === "won") {
-      if (!formData.sdrId || formData.sdrId === "") {
-        setError("Por favor, selecione um SDR. É obrigatório para realizar a venda.")
+    // Validação: Pipeline e Stage são obrigatórios
+    if (!formData.pipelineId || !formData.stageId) {
+      setError("Por favor, selecione um pipeline e um estágio.")
+      return
+    }
+
+    // Verificar requisitos do stage selecionado
+    const currentStage = selectedPipeline?.stages.find(s => s.id === formData.stageId)
+    if (currentStage) {
+      if (currentStage.requiresSdr && (!formData.sdrId || formData.sdrId === "")) {
+        setError(`O estágio "${currentStage.name}" requer que um SDR seja selecionado.`)
         return
       }
 
-      if (!formData.closerId || formData.closerId === "") {
-        setError("Por favor, selecione um Closer. É obrigatório para realizar a venda.")
+      if (currentStage.requiresCloser && (!formData.closerId || formData.closerId === "")) {
+        setError(`O estágio "${currentStage.name}" requer que um Closer seja selecionado.`)
         return
       }
     }
@@ -115,6 +164,8 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         email: formData.email,
         phone: formData.phone || undefined,
         company: formData.company || undefined,
+        pipelineId: formData.pipelineId,
+        stageId: formData.stageId,
         status: formData.status,
         leadSource: formData.leadSource || undefined,
         sdrId: formData.sdrId || undefined,
@@ -127,11 +178,14 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         email: "",
         phone: "",
         company: "",
+        pipelineId: "",
+        stageId: "",
         status: "new_lead",
         leadSource: "",
         sdrId: "",
         closerId: "",
       })
+      setSelectedPipeline(null)
 
       // Close sheet
       setOpen(false)
@@ -165,7 +219,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Adicionar Novo Contato</SheetTitle>
           <SheetDescription>
-            Insira as informações do contato abaixo. SDR e Closer são obrigatórios apenas ao realizar vendas (status "Ganho").
+            Insira as informações do contato abaixo. Selecione o pipeline e estágio apropriados. Alguns estágios podem exigir SDR ou Closer.
           </SheetDescription>
         </SheetHeader>
 
@@ -233,24 +287,69 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
             </div>
 
             <div className="space-y-3">
-              <Label htmlFor="status" className="text-sm font-semibold">
-                Status <span className="text-destructive">*</span>
+              <Label htmlFor="pipeline" className="text-sm font-semibold">
+                Pipeline <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange("status", value)}
+                value={formData.pipelineId}
+                onValueChange={handlePipelineChange}
               >
-                <SelectTrigger id="status" className="h-11 cursor-pointer">
-                  <SelectValue />
+                <SelectTrigger id="pipeline" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione um pipeline" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="new_lead" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Novo Lead</SelectItem>
-                  <SelectItem value="contacted" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Contatado</SelectItem>
-                  <SelectItem value="meeting" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Reunião Agendada</SelectItem>
-                  <SelectItem value="negotiation" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Negociação</SelectItem>
-                  <SelectItem value="won" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Ganho</SelectItem>
-                  <SelectItem value="lost" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Perdido</SelectItem>
-                  <SelectItem value="disqualified" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Desqualificado</SelectItem>
+                  {pipelines.length === 0 ? (
+                    <SelectItem value="no-pipelines" disabled>
+                      Nenhum pipeline configurado
+                    </SelectItem>
+                  ) : (
+                    pipelines.map(pipeline => (
+                      <SelectItem key={pipeline.id} value={pipeline.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pipeline.color }} />
+                          {pipeline.name}
+                          {pipeline.isDefault && <span className="text-xs text-muted-foreground">(Padrão)</span>}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label htmlFor="stage" className="text-sm font-semibold">
+                Estágio <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.stageId}
+                onValueChange={(value) => handleInputChange("stageId", value)}
+                disabled={!selectedPipeline}
+              >
+                <SelectTrigger id="stage" className="h-11 cursor-pointer">
+                  <SelectValue placeholder="Selecione um estágio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!selectedPipeline ? (
+                    <SelectItem value="no-pipeline" disabled>
+                      Selecione um pipeline primeiro
+                    </SelectItem>
+                  ) : selectedPipeline.stages.length === 0 ? (
+                    <SelectItem value="no-stages" disabled>
+                      Este pipeline não tem estágios configurados
+                    </SelectItem>
+                  ) : (
+                    selectedPipeline.stages.map(stage => (
+                      <SelectItem key={stage.id} value={stage.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+                          {stage.name}
+                          {stage.countsAsMeeting && <span className="text-xs text-muted-foreground">(Reunião)</span>}
+                          {stage.countsAsSale && <span className="text-xs text-muted-foreground">(Venda)</span>}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

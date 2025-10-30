@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ContactsTable } from "@/components/CRM/contacts-table"
 import { ContactsKanban } from "@/components/CRM/contacts-kanban"
 import { DealsGrid } from "@/components/CRM/deals-grid"
+import { PipelinesConfig } from "@/components/CRM/pipelines-config"
 import { AddContactSheet } from "@/components/CRM/add-contact-sheet"
 import { useAuth } from "@/hooks/use-auth"
 import useData from "@/hooks/use-data"
@@ -92,6 +93,7 @@ export default function ContactsPage() {
             <TabsList className="space-x-2">
               <TabsTrigger value="table">Tabela</TabsTrigger>
               <TabsTrigger value="kanban">Kanban</TabsTrigger>
+              <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
               {/* <TabsTrigger value="deals">Vendas</TabsTrigger> */}
             </TabsList>
 
@@ -111,6 +113,10 @@ export default function ContactsPage() {
                 onContactUpdated={loadContacts}
                 dataService={dataService}
               />
+            </TabsContent>
+
+            <TabsContent value="pipelines" className="space-y-4">
+              <PipelinesConfig />
             </TabsContent>
 
             <TabsContent value="deals" className="space-y-4">

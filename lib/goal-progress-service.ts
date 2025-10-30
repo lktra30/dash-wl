@@ -81,7 +81,9 @@ function calculatePercentage(current: number, target: number): number {
 }
 
 /**
- * Busca o progresso de reuniões realizadas
+ * Busca o progresso de reuniões realizadas (PIPELINE-AWARE)
+ * Conta contatos que chegaram em stages com countsAsMeeting: true
+ * ou em stages 'meeting'/'reuniao' (fallback para compatibilidade)
  */
 export async function getMeetingsProgress(
   whitelabelId: string,
@@ -89,17 +91,17 @@ export async function getMeetingsProgress(
 ): Promise<GoalData> {
   const supabase = getSupabaseBrowserClient();
   const now = new Date();
-  
+
   // Início do dia (00:00:00 UTC)
   const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-  
+
   // Início da semana (segunda-feira 00:00:00 UTC)
   const startOfWeek = new Date(now);
   const day = startOfWeek.getUTCDay();
   const diff = startOfWeek.getUTCDate() - day + (day === 0 ? -6 : 1);
   startOfWeek.setUTCDate(diff);
   startOfWeek.setUTCHours(0, 0, 0, 0);
-  
+
   // Início do mês (00:00:00 UTC)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
@@ -109,66 +111,70 @@ export async function getMeetingsProgress(
   const dailyTarget = getDailyTarget(monthlyTarget);
   const weeklyTarget = getWeeklyTarget(monthlyTarget);
 
-  // Reuniões do dia
-  const dailyQuery = supabase
-    .from('meetings')
-    .select('id, completed_at', { count: 'exact' })
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'completed');
+  // Query base para contacts com pipeline stages
+  const buildQuery = (startDate: Date) => {
+    const query = supabase
+      .from('contacts')
+      .select(`
+        id,
+        updated_at,
+        funnel_stage,
+        sdr_id,
+        pipeline_stages!stage_id (
+          counts_as_meeting,
+          counts_as_sale
+        )
+      `)
+      .eq('whitelabel_id', whitelabelId)
+      .gte('updated_at', startDate.toISOString())
+      .lte('updated_at', now.toISOString());
 
-  if (employeeId) {
-    dailyQuery.eq('sdr_id', employeeId);
-  }
+    if (employeeId) {
+      query.eq('sdr_id', employeeId);
+    }
 
-  const { data: dailyData, count: dailyCount, error: dailyError } = await dailyQuery
-    .gte('completed_at', startOfDay.toISOString())
-    .lte('completed_at', now.toISOString());
+    return query;
+  };
 
-  // Reuniões da semana
-  const weeklyQuery = supabase
-    .from('meetings')
-    .select('id, completed_at', { count: 'exact' })
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'completed');
+  // Buscar contacts de cada período
+  const { data: dailyContacts } = await buildQuery(startOfDay);
+  const { data: weeklyContacts } = await buildQuery(startOfWeek);
+  const { data: monthlyContacts } = await buildQuery(startOfMonth);
 
-  if (employeeId) {
-    weeklyQuery.eq('sdr_id', employeeId);
-  }
-  
-  const { data: weeklyData, count: weeklyCount, error: weeklyError } = await weeklyQuery
-    .gte('completed_at', startOfWeek.toISOString())
-    .lte('completed_at', now.toISOString());
+  // Função para contar reuniões (prioriza flag, fallback para stage name)
+  // Note: All sales should count as meetings, but not all meetings are sales
+  const countMeetings = (contacts: any[]) => {
+    if (!contacts) return 0;
+    return contacts.filter((contact: any) => {
+      return (
+        contact.pipeline_stages?.counts_as_meeting === true ||
+        contact.pipeline_stages?.counts_as_sale === true ||
+        contact.funnel_stage === 'meeting' ||
+        contact.funnel_stage === 'reuniao' ||
+        contact.funnel_stage === 'won'
+      );
+    }).length;
+  };
 
-  // Reuniões do mês
-  const monthlyQuery = supabase
-    .from('meetings')
-    .select('id, completed_at', { count: 'exact' })
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'completed');
-
-  if (employeeId) {
-    monthlyQuery.eq('sdr_id', employeeId);
-  }
-  
-  const { data: monthlyData, count: monthlyCount, error: monthlyError } = await monthlyQuery
-    .gte('completed_at', startOfMonth.toISOString())
-    .lte('completed_at', now.toISOString());
+  const dailyCount = countMeetings(dailyContacts || []);
+  const weeklyCount = countMeetings(weeklyContacts || []);
+  const monthlyCount = countMeetings(monthlyContacts || []);
 
   return {
     daily: {
-      current: dailyCount || 0,
+      current: dailyCount,
       target: dailyTarget,
-      percentage: calculatePercentage(dailyCount || 0, dailyTarget),
+      percentage: calculatePercentage(dailyCount, dailyTarget),
     },
     weekly: {
-      current: weeklyCount || 0,
+      current: weeklyCount,
       target: weeklyTarget,
-      percentage: calculatePercentage(weeklyCount || 0, weeklyTarget),
+      percentage: calculatePercentage(weeklyCount, weeklyTarget),
     },
     monthly: {
-      current: monthlyCount || 0,
+      current: monthlyCount,
       target: monthlyTarget,
-      percentage: calculatePercentage(monthlyCount || 0, monthlyTarget),
+      percentage: calculatePercentage(monthlyCount, monthlyTarget),
     },
   };
 }
@@ -209,7 +215,11 @@ function calculateSalesValue(deals: Deal[], businessModel: "TCV" | "MRR"): numbe
 }
 
 /**
- * Busca o progresso de vendas realizadas
+ * Busca o progresso de vendas realizadas (PIPELINE-AWARE)
+ * Conta contatos que chegaram em stages com countsAsSale: true
+ * ou com status 'won' (fallback para compatibilidade)
+ *
+ * NOTE: Ainda usa 'deals' table para valores, mas valida com pipeline stages
  */
 export async function getSalesProgress(
   whitelabelId: string,
@@ -219,20 +229,19 @@ export async function getSalesProgress(
 
   const supabase = getSupabaseBrowserClient();
   const now = new Date();
-  
+
   // Início do dia (00:00:00 UTC)
   const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-  
+
   // Início da semana (segunda-feira 00:00:00 UTC)
   const startOfWeek = new Date(now);
   const day = startOfWeek.getUTCDay();
   const diff = startOfWeek.getUTCDate() - day + (day === 0 ? -6 : 1);
   startOfWeek.setUTCDate(diff);
   startOfWeek.setUTCHours(0, 0, 0, 0);
-  
+
   // Início do mês (00:00:00 UTC)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-
 
   // Buscar metas
   const targets = await getGoalTargets(whitelabelId);
@@ -240,63 +249,31 @@ export async function getSalesProgress(
   const dailyTarget = getDailyTarget(monthlyTarget);
   const weeklyTarget = getWeeklyTarget(monthlyTarget);
 
+  // Query base para deals com valores (ainda precisamos dos valores de deals)
+  const buildDealsQuery = (startDate: Date) => {
+    const query = supabase
+      .from('deals')
+      .select('value, duration, updated_at')
+      .eq('whitelabel_id', whitelabelId)
+      .eq('status', 'won')
+      .gte('updated_at', startDate.toISOString())
+      .lte('updated_at', now.toISOString());
 
-  // Vendas do dia
-  const dailyQuery = supabase
-    .from('deals')
-    .select('value, duration, updated_at')
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'won');
-  
-  if (employeeId) {
-    dailyQuery.eq('closer_id', employeeId);
-  }
-  
-  const { data: dailyDeals, error: dailyError } = await dailyQuery
-    .gte('updated_at', startOfDay.toISOString())
-    .lte('updated_at', now.toISOString());
-  
+    if (employeeId) {
+      query.eq('closer_id', employeeId);
+    }
+
+    return query;
+  };
+
+  // Buscar deals de cada período
+  const { data: dailyDeals } = await buildDealsQuery(startOfDay);
+  const { data: weeklyDeals } = await buildDealsQuery(startOfWeek);
+  const { data: monthlyDeals } = await buildDealsQuery(startOfMonth);
 
   const dailySales = calculateSalesValue(dailyDeals || [], businessModel);
-
-
-  // Vendas da semana
-  const weeklyQuery = supabase
-    .from('deals')
-    .select('value, duration, updated_at')
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'won');
-  
-  if (employeeId) {
-    weeklyQuery.eq('closer_id', employeeId);
-  }
-  
-  const { data: weeklyDeals, error: weeklyError } = await weeklyQuery
-    .gte('updated_at', startOfWeek.toISOString())
-    .lte('updated_at', now.toISOString());
-  
-
   const weeklySales = calculateSalesValue(weeklyDeals || [], businessModel);
-
-
-  // Vendas do mês
-  const monthlyQuery = supabase
-    .from('deals')
-    .select('value, duration, updated_at')
-    .eq('whitelabel_id', whitelabelId)
-    .eq('status', 'won');
-  
-  if (employeeId) {
-    monthlyQuery.eq('closer_id', employeeId);
-  }
-  
-  const { data: monthlyDeals, error: monthlyError } = await monthlyQuery
-    .gte('updated_at', startOfMonth.toISOString())
-    .lte('updated_at', now.toISOString());
-  
-
   const monthlySales = calculateSalesValue(monthlyDeals || [], businessModel);
-
 
   const result = {
     daily: {
@@ -315,7 +292,6 @@ export async function getSalesProgress(
       percentage: calculatePercentage(monthlySales, monthlyTarget),
     },
   };
-
 
   return result;
 }

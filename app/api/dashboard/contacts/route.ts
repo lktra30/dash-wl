@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { mapStageToFunnelStage } from "@/lib/stage-mapping"
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +44,8 @@ export async function GET(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      pipelineId: contact.pipeline_id,
+      stageId: contact.stage_id,
       leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform camelCase to database snake_case
-    const contactData = {
+    const contactData: any = {
       name: body.name,
       email: body.email,
       phone: body.phone,
@@ -111,6 +114,14 @@ export async function POST(request: NextRequest) {
       whitelabel_id: user.whitelabel_id,
       sdr_id: body.sdrId,
       closer_id: body.closerId,
+    }
+
+    // Adicionar pipeline e stage se fornecidos
+    if (body.pipelineId) {
+      contactData.pipeline_id = body.pipelineId
+    }
+    if (body.stageId) {
+      contactData.stage_id = body.stageId
     }
 
     // Create the contact
@@ -133,6 +144,8 @@ export async function POST(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      pipelineId: contact.pipeline_id,
+      stageId: contact.stage_id,
       leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,
@@ -200,11 +213,29 @@ export async function PATCH(request: NextRequest) {
     if (updates.phone !== undefined) updateData.phone = updates.phone
     if (updates.company !== undefined) updateData.company = updates.company
     if (updates.status !== undefined) updateData.funnel_stage = updates.status
+    if (updates.pipelineId !== undefined) updateData.pipeline_id = updates.pipelineId
+    if (updates.stageId !== undefined) updateData.stage_id = updates.stageId
     if (updates.leadSource !== undefined) updateData.lead_source = updates.leadSource
     if (updates.dealValue !== undefined) updateData.deal_value = updates.dealValue
     if (updates.dealDuration !== undefined) updateData.deal_duration = updates.dealDuration
     if (updates.sdrId !== undefined) updateData.sdr_id = updates.sdrId
     if (updates.closerId !== undefined) updateData.closer_id = updates.closerId
+
+    // Sync funnel_stage when stageId changes
+    if (updates.stageId !== undefined) {
+      // Fetch stage information to determine the appropriate funnel_stage
+      const { data: stageInfo } = await supabase
+        .from("pipeline_stages")
+        .select("counts_as_meeting, counts_as_sale, order_position, name")
+        .eq("id", updates.stageId)
+        .single()
+
+      // Map stage to funnel_stage to keep both fields in sync
+      updateData.funnel_stage = mapStageToFunnelStage(stageInfo)
+    }
+
+    // Always update the updated_at timestamp
+    updateData.updated_at = new Date().toISOString()
 
     // Update the contact
     const { data: contact, error: contactError } = await supabase
@@ -228,6 +259,8 @@ export async function PATCH(request: NextRequest) {
       phone: contact.phone,
       company: contact.company,
       status: contact.funnel_stage,
+      pipelineId: contact.pipeline_id,
+      stageId: contact.stage_id,
       leadSource: contact.lead_source,
       whitelabelId: contact.whitelabel_id,
       assignedTo: contact.assigned_to,

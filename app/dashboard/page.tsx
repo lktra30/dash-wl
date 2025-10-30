@@ -3,12 +3,13 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 // import { StatsCard } from "@/components/stats-card"
-import { FunnelCard } from "@/components/funnel-card"
 import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from "@/components/date-range-filter"
 import { MainMetricsCards, calculateMainPageMetrics, TeamCompetition } from "@/components/mainPage"
 import { MeetingsGoalProgress, SalesGoalProgress } from "@/components/goals"
 import { MetaAdsMainCards, MetaAdsMonthlyChart } from "@/components/ads"
 import { SalesEvolutionChart } from "@/components/sales"
+import { LeadsEvolutionChart } from "@/components/leads/leads-evolution-chart"
+import { PipelineComparisonCard } from "@/components/pipelines/pipeline-comparison-card"
 import { SDRRanking } from "@/components/mainPage/sdr-ranking"
 import { CloserRanking } from "@/components/mainPage/closer-ranking"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,6 +39,14 @@ export default function DashboardPage() {
   // Sales Evolution state
   const [salesEvolutionData, setSalesEvolutionData] = useState<any[]>([])
   const [isSalesEvolutionLoading, setIsSalesEvolutionLoading] = useState(true)
+
+  // Leads Evolution state
+  const [leadsEvolutionData, setLeadsEvolutionData] = useState<any[]>([])
+  const [isLeadsEvolutionLoading, setIsLeadsEvolutionLoading] = useState(true)
+
+  // Pipeline Metrics state
+  const [pipelineMetrics, setPipelineMetrics] = useState<any[]>([])
+  const [isPipelineMetricsLoading, setIsPipelineMetricsLoading] = useState(true)
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -181,6 +190,68 @@ export default function DashboardPage() {
     loadSalesEvolutionData()
   }, [user, authLoading])
 
+  // Load Leads Evolution data - Independent of date filter (last 12 months)
+  useEffect(() => {
+    const loadLeadsEvolutionData = async () => {
+      if (authLoading || !user) return
+
+      setIsLeadsEvolutionLoading(true)
+      try {
+        const response = await fetch("/api/dashboard/leads-evolution", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setLeadsEvolutionData(data)
+        } else {
+          setLeadsEvolutionData([])
+        }
+      } catch (error) {
+        setLeadsEvolutionData([])
+        // Silently ignore errors
+      } finally {
+        setIsLeadsEvolutionLoading(false)
+      }
+    }
+
+    loadLeadsEvolutionData()
+  }, [user, authLoading])
+
+  // Load Pipeline Metrics data
+  useEffect(() => {
+    const loadPipelineMetrics = async () => {
+      if (authLoading || !user) return
+
+      setIsPipelineMetricsLoading(true)
+      try {
+        const response = await fetch("/api/dashboard/pipeline-metrics", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setPipelineMetrics(data)
+        } else {
+          setPipelineMetrics([])
+        }
+      } catch (error) {
+        setPipelineMetrics([])
+        // Silently ignore errors
+      } finally {
+        setIsPipelineMetricsLoading(false)
+      }
+    }
+
+    loadPipelineMetrics()
+  }, [user, authLoading])
+
   if (authLoading) {
     return (
       <DashboardLayout>
@@ -239,12 +310,30 @@ export default function DashboardPage() {
             <MainMetricsCards metrics={null as any} isLoading={true} brandColor={whitelabel.brandColor} />
           )}
 
+          {/* Pipeline Comparison Section */}
+          <div className="space-y-4">
+            <PipelineComparisonCard
+              pipelines={pipelineMetrics}
+              brandColor={whitelabel.brandColor}
+              isLoading={isPipelineMetricsLoading}
+            />
+          </div>
+
           {/* Sales Evolution Section */}
           <div className="space-y-4">
             <SalesEvolutionChart
               data={salesEvolutionData}
               brandColor={whitelabel.brandColor}
               isLoading={isSalesEvolutionLoading}
+            />
+          </div>
+
+          {/* Leads Evolution Section */}
+          <div className="space-y-4">
+            <LeadsEvolutionChart
+              data={leadsEvolutionData}
+              brandColor={whitelabel.brandColor}
+              isLoading={isLeadsEvolutionLoading}
             />
           </div>
 
@@ -293,11 +382,6 @@ export default function DashboardPage() {
           </div>
 
           {/* Team Competition Section - Only if enabled and 2+ teams */}
-
-          {/* Funnel Section with Side Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <FunnelCard dateRange={{ from: dateRange.from, to: dateRange.to }} />
-          </div>
 
           {/* Team Competition Section */}
           {competition && topTeams.length > 0 && (
