@@ -42,6 +42,20 @@ interface Employee {
   role: string
 }
 
+interface PipelineStage {
+  id: string
+  name: string
+  color: string
+  order: number
+}
+
+interface PipelineWithStages {
+  id: string
+  name: string
+  isDefault: boolean
+  stages: PipelineStage[]
+}
+
 interface ContactsTableProps {
   contacts: Contact[]
   onContactUpdated: () => void
@@ -107,6 +121,8 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
   const [sortBy, setSortBy] = useState<"name" | "date">("date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [pipelines, setPipelines] = useState<PipelineWithStages[]>([])
+  const [allStages, setAllStages] = useState<PipelineStage[]>([])
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>([
     "name",
     "company",
@@ -118,9 +134,10 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
     "createdAt"
   ])
 
-  // Load employees for filters
+  // Load employees and pipelines for filters
   useEffect(() => {
     loadEmployees()
+    loadPipelines()
   }, [])
 
   const loadEmployees = async () => {
@@ -132,6 +149,27 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
       }
     } catch (error) {
       setEmployees([])
+    }
+  }
+
+  const loadPipelines = async () => {
+    try {
+      const response = await fetch('/api/dashboard/pipelines')
+      if (response.ok) {
+        const data = await response.json()
+        setPipelines(data)
+
+        // Collect all stages from all pipelines
+        const stages: PipelineStage[] = []
+        data.forEach((pipeline: PipelineWithStages) => {
+          if (pipeline.stages) {
+            stages.push(...pipeline.stages)
+          }
+        })
+        setAllStages(stages)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar pipelines:', error)
     }
   }
 
@@ -184,7 +222,11 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
       contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.company?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesStatus = statusFilter === "all" || contact.status === statusFilter
+    // Filter by stageId (new) or status (legacy)
+    const matchesStatus = statusFilter === "all" ||
+      (contact as any).stageId === statusFilter ||
+      contact.status === statusFilter
+
     const matchesSdr = sdrFilter === "all" || (contact as any).sdrId === sdrFilter
     const matchesCloser = closerFilter === "all" || (contact as any).closerId === closerFilter
 
@@ -245,14 +287,13 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="new_lead">Novo Lead</SelectItem>
-                <SelectItem value="contacted">Contatado</SelectItem>
-                <SelectItem value="meeting">Reunião</SelectItem>
-                <SelectItem value="negotiation">Negociação</SelectItem>
-                <SelectItem value="won">Ganho</SelectItem>
-                <SelectItem value="closed">Fechado</SelectItem>
-                <SelectItem value="lost">Perdido</SelectItem>
-                <SelectItem value="disqualified">Desqualificado</SelectItem>
+                {allStages
+                  .sort((a, b) => a.order - b.order)
+                  .map(stage => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      {stage.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 
@@ -433,11 +474,32 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                         )}
                         {visibleColumns.includes("status") && (
                           <TableCell>
-                            <Badge
-                              className={getStatusColor(contact.status)}
-                            >
-                              {getStatusLabel(contact.status)}
-                            </Badge>
+                            {(() => {
+                              // Find stage by stageId (new) or fallback to status (legacy)
+                              const stage = allStages.find(s => s.id === (contact as any).stageId)
+
+                              if (stage) {
+                                return (
+                                  <Badge
+                                    style={{
+                                      backgroundColor: `${stage.color}20`,
+                                      color: stage.color,
+                                      borderColor: stage.color
+                                    }}
+                                    className="border"
+                                  >
+                                    {stage.name}
+                                  </Badge>
+                                )
+                              }
+
+                              // Fallback to legacy status display
+                              return (
+                                <Badge className={getStatusColor(contact.status)}>
+                                  {getStatusLabel(contact.status)}
+                                </Badge>
+                              )
+                            })()}
                           </TableCell>
                         )}
                         {visibleColumns.includes("leadSource") && (
