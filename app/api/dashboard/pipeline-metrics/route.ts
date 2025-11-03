@@ -114,6 +114,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // Get date range from query parameters
+    const { searchParams } = new URL(request.url)
+    const fromDate = searchParams.get('from')
+    const toDate = searchParams.get('to')
+
     // Fetch all pipelines with their stages
     const { data: pipelines, error: pipelinesError } = await supabase
       .from("pipelines")
@@ -144,7 +149,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all contacts with their stage information
-    const { data: contacts, error: contactsError } = await supabase
+    let contactsQuery = supabase
       .from("contacts")
       .select(`
         id,
@@ -158,6 +163,20 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("whitelabel_id", user.whitelabel_id)
+
+    // Apply date filters if provided
+    if (fromDate) {
+      contactsQuery = contactsQuery.gte("created_at", fromDate)
+    }
+    if (toDate) {
+      // Add one day to include the entire end date
+      const endDate = new Date(toDate)
+      endDate.setDate(endDate.getDate() + 1)
+      const toDateInclusive = endDate.toISOString().split('T')[0]
+      contactsQuery = contactsQuery.lt("created_at", toDateInclusive)
+    }
+
+    const { data: contacts, error: contactsError } = await contactsQuery
 
     if (contactsError) {
       console.error("Error fetching contacts:", contactsError)
@@ -193,23 +212,46 @@ export async function GET(request: NextRequest) {
 
       // Count meetings (prioritize flag, fallback to stage name)
       // Note: All sales should count as meetings, but not all meetings are sales
-      const meetingContacts = pipelineContacts.filter((contact: any) => {
-        return (
+      // IMPORTANT: Each contact should be counted only once
+      const meetingContactIds = new Set<string>()
+
+      pipelineContacts.forEach((contact: any) => {
+        const isMeeting =
           contact.pipeline_stages?.counts_as_meeting === true ||
           contact.pipeline_stages?.counts_as_sale === true ||
           contact.funnel_stage === 'meeting' ||
           contact.funnel_stage === 'reuniao' ||
           contact.funnel_stage === 'won'
-        )
+
+        if (isMeeting) {
+          meetingContactIds.add(contact.id)
+        }
       })
 
-      // Count sales (prioritize flag, fallback to status)
-      const salesContacts = pipelineContacts.filter((contact: any) => {
-        return (
-          contact.pipeline_stages?.counts_as_sale === true ||
-          contact.funnel_stage === 'won'
+      const meetingContacts = Array.from(meetingContactIds).map(id =>
+        pipelineContacts.find((c: any) => c.id === id)
+      ).filter(Boolean)
+
+      // Count sales - only count contacts currently in a stage marked as sale
+      // This ensures consistency with the funnel visualization
+      // IMPORTANT: Each contact should be counted only once, even if it matches multiple sale stages
+      const salesStages = stages.filter((s: any) => s.counts_as_sale === true)
+      const salesContactIds = new Set<string>()
+
+      pipelineContacts.forEach((contact: any) => {
+        // Check if contact is in any sale stage
+        const isInSaleStage = salesStages.some((stage: any) =>
+          shouldContactBeInStage(contact, stage, stages)
         )
+
+        if (isInSaleStage) {
+          salesContactIds.add(contact.id)
+        }
       })
+
+      const salesContacts = Array.from(salesContactIds).map(id =>
+        pipelineContacts.find((c: any) => c.id === id)
+      ).filter(Boolean)
 
       const totalMeetings = meetingContacts.length
       const totalSales = salesContacts.length

@@ -5,13 +5,50 @@ import { authenticateUser, createErrorResponse, createSuccessResponse } from "@/
 export async function GET(request: NextRequest) {
   try {
     const { user, error } = await authenticateUser(request)
-    
+
     if (error || !user) {
       return createErrorResponse(error || "Unauthorized", 401)
     }
 
     const supabase = await getSupabaseServerClient()
     const whitelabelId = user.whitelabel_id
+
+    // Get date range from query parameters
+    const { searchParams } = new URL(request.url)
+    const fromDate = searchParams.get('from')
+    const toDate = searchParams.get('to')
+
+    // Build queries with optional date filters
+    let contactsCountQuery = supabase.from("contacts").select("*", { count: "exact", head: true }).eq("whitelabel_id", whitelabelId)
+    let contactsQuery = supabase.from("contacts").select("*").eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false }).limit(5)
+    let allContactsQuery = supabase.from("contacts").select(`
+      id,
+      funnel_stage,
+      pipeline_stages!stage_id (
+        counts_as_meeting,
+        counts_as_sale
+      )
+    `).eq("whitelabel_id", whitelabelId)
+    let dealsQuery = supabase.from("deals").select("*", { count: "exact" }).eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false })
+
+    // Apply date filters if provided
+    if (fromDate) {
+      contactsCountQuery = contactsCountQuery.gte("created_at", fromDate)
+      contactsQuery = contactsQuery.gte("created_at", fromDate)
+      allContactsQuery = allContactsQuery.gte("created_at", fromDate)
+      dealsQuery = dealsQuery.gte("created_at", fromDate)
+    }
+    if (toDate) {
+      // Add one day to include the entire end date
+      const endDate = new Date(toDate)
+      endDate.setDate(endDate.getDate() + 1)
+      const toDateInclusive = endDate.toISOString().split('T')[0]
+
+      contactsCountQuery = contactsCountQuery.lt("created_at", toDateInclusive)
+      contactsQuery = contactsQuery.lt("created_at", toDateInclusive)
+      allContactsQuery = allContactsQuery.lt("created_at", toDateInclusive)
+      dealsQuery = dealsQuery.lt("created_at", toDateInclusive)
+    }
 
     // Fetch all data in parallel
     const [
@@ -21,17 +58,10 @@ export async function GET(request: NextRequest) {
       { data: dealsRaw, count: totalDeals },
       { data: teams }
     ] = await Promise.all([
-      supabase.from("contacts").select("*", { count: "exact", head: true }).eq("whitelabel_id", whitelabelId),
-      supabase.from("contacts").select("*").eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false }).limit(5),
-      supabase.from("contacts").select(`
-        id,
-        funnel_stage,
-        pipeline_stages!stage_id (
-          counts_as_meeting,
-          counts_as_sale
-        )
-      `).eq("whitelabel_id", whitelabelId),
-      supabase.from("deals").select("*", { count: "exact" }).eq("whitelabel_id", whitelabelId).order("created_at", { ascending: false }),
+      contactsCountQuery,
+      contactsQuery,
+      allContactsQuery,
+      dealsQuery,
       supabase.from("teams").select(`
         *,
         team_members(user_id)

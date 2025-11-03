@@ -61,8 +61,92 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
     }
   }
 
+  // Helper function to check if a contact belongs to a specific stage
+  // Supports both new system (stageId) and legacy system (status/funnel_stage)
+  const shouldContactBeInStage = (contact: Contact, stage: PipelineStage): boolean => {
+    // Priority 1: Use stageId if available (new system)
+    if (contact.stageId) {
+      return contact.stageId === stage.id
+    }
+
+    // Priority 2: Fallback to status field for legacy contacts
+    const status = contact.status
+    if (!status) {
+      return false
+    }
+
+    // Map legacy status to new stages
+    const stageName = stage.name.toLowerCase()
+
+    switch (status) {
+      case 'new_lead':
+        // First stage or stage with "novo"/"new" in name
+        return stage.orderPosition === 1 ||
+               stageName.includes('novo') ||
+               stageName.includes('new') ||
+               stageName.includes('lead')
+
+      case 'contacted':
+        // Second stage or stage with "contato"/"contacted" in name
+        return stage.orderPosition === 2 ||
+               stageName.includes('contato') ||
+               stageName.includes('contacted') ||
+               stageName.includes('contact')
+
+      case 'meeting':
+        // Stage with meeting flag or stage with "reunião"/"meeting" in name
+        return stage.countsAsMeeting === true ||
+               stageName.includes('reunião') ||
+               stageName.includes('reuniao') ||
+               stageName.includes('meeting') ||
+               stageName.includes('agendada')
+
+      case 'negotiation':
+        // Fourth stage or stage with "negociação"/"negotiation" in name
+        return stage.orderPosition === 4 ||
+               stageName.includes('negociação') ||
+               stageName.includes('negociacao') ||
+               stageName.includes('negotiation')
+
+      case 'won':
+      case 'closed':
+        // Stage with counts_as_sale flag or stage with "ganho"/"won"/"fechado" in name
+        return stage.countsAsSale === true ||
+               stageName.includes('ganho') ||
+               stageName.includes('won') ||
+               stageName.includes('fechado') ||
+               stageName.includes('venda')
+
+      case 'lost':
+        // Stage with "perdido"/"lost" in name
+        return stageName.includes('perdido') ||
+               stageName.includes('lost')
+
+      case 'disqualified':
+        // Stage with "desqualificado"/"disqualified" in name
+        return stageName.includes('desqualificado') ||
+               stageName.includes('disqualified')
+
+      default:
+        return false
+    }
+  }
+
   const getContactsByStage = (stageId: string) => {
-    return contacts.filter((contact) => contact.stageId === stageId)
+    const stage = selectedPipeline?.stages.find(s => s.id === stageId)
+    if (!stage) return []
+
+    return contacts.filter((contact) => {
+      // Check if contact belongs to this pipeline
+      // Include contacts with matching pipelineId OR legacy contacts (no pipelineId) if this is the default pipeline
+      const belongsToPipeline =
+        contact.pipelineId === selectedPipeline?.id ||
+        (!contact.pipelineId && selectedPipeline?.isDefault)
+
+      if (!belongsToPipeline) return false
+
+      return shouldContactBeInStage(contact, stage)
+    })
   }
 
   const handleDragStart = (contact: Contact) => {
@@ -135,7 +219,7 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 space-y-4">
       {/* Seletor de Pipeline */}
       {pipelines.length > 1 && (
         <div className="flex items-center gap-2">
@@ -171,10 +255,9 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
 
       {/* Kanban Columns */}
       <div
-        className="grid gap-4"
+        className="grid gap-4 overflow-auto flex-1"
         style={{
           gridTemplateColumns: `repeat(${selectedPipeline.stages.length}, minmax(280px, 1fr))`,
-          overflowX: "auto",
         }}
       >
         {selectedPipeline.stages.map((stage) => {
@@ -185,7 +268,7 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
           return (
             <Card
               key={stage.id}
-              className={`min-h-[600px] transition-all duration-200 ${
+              className={`h-full flex flex-col transition-all duration-200 ${
                 isDraggedFromHere ? "opacity-90" : ""
               }`}
               style={
@@ -237,7 +320,7 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 overflow-y-auto flex-1">
                 {stageContacts.map((contact) => (
                   <ContactCard
                     key={contact.id}

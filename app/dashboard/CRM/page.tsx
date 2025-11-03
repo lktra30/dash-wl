@@ -83,13 +83,13 @@ export default function ContactsPage() {
         />
       </DashboardHeader>
 
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 flex flex-col p-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Carregando contatos...</p>
           </div>
         ) : (
-          <Tabs defaultValue="table" className="space-y-6">
+          <Tabs defaultValue="table" className="flex-1 flex flex-col space-y-6">
             <TabsList className="space-x-2">
               <TabsTrigger value="table">Tabela</TabsTrigger>
               <TabsTrigger value="kanban">Kanban</TabsTrigger>
@@ -106,7 +106,7 @@ export default function ContactsPage() {
               />
             </TabsContent>
 
-            <TabsContent value="kanban" className="space-y-4">
+            <TabsContent value="kanban" className="flex-1 flex flex-col space-y-4">
               <ContactsKanban
                 contacts={contacts}
                 onUpdateContact={handleUpdateContact}

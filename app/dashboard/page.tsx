@@ -56,7 +56,12 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         // Use the secure API endpoint instead of direct Supabase calls
-        const response = await fetch("/api/dashboard", {
+        const params = new URLSearchParams({
+          from: dateRange.from.toISOString().split('T')[0],
+          to: dateRange.to.toISOString().split('T')[0]
+        })
+
+        const response = await fetch(`/api/dashboard?${params}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -100,6 +105,14 @@ export default function DashboardPage() {
     }
 
     loadDashboardData()
+
+    // Auto-refresh dashboard data every 30 seconds
+    const interval = setInterval(() => {
+      loadDashboardData()
+    }, 30000)
+
+    // Cleanup interval on unmount or dependency change
+    return () => clearInterval(interval)
   }, [user, authLoading, whitelabel, dateRange])
 
   // Load Meta Ads data - Cards filtered by dateRange, Chart shows 1 year
@@ -228,7 +241,12 @@ export default function DashboardPage() {
 
       setIsPipelineMetricsLoading(true)
       try {
-        const response = await fetch("/api/dashboard/pipeline-metrics", {
+        const params = new URLSearchParams({
+          from: dateRange.from.toISOString().split('T')[0],
+          to: dateRange.to.toISOString().split('T')[0]
+        })
+
+        const response = await fetch(`/api/dashboard/pipeline-metrics?${params}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -250,7 +268,15 @@ export default function DashboardPage() {
     }
 
     loadPipelineMetrics()
-  }, [user, authLoading])
+
+    // Auto-refresh pipeline metrics every 30 seconds
+    const interval = setInterval(() => {
+      loadPipelineMetrics()
+    }, 30000)
+
+    // Cleanup interval on unmount or dependency change
+    return () => clearInterval(interval)
+  }, [user, authLoading, dateRange])
 
   if (authLoading) {
     return (
