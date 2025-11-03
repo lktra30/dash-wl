@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Calendar, DollarSign } from "lucide-react"
+import { Calendar, DollarSign } from "lucide-react"
 import type { PipelineFunnelStage } from "@/lib/types"
 
 interface DynamicPipelineFunnelProps {
@@ -76,21 +76,8 @@ export const DynamicPipelineFunnel = React.memo(({ stages, pipelineColor = "#636
                 <span className="text-sm font-semibold text-white">
                   {stage.count} {stage.count === 1 ? 'lead' : 'leads'}
                 </span>
-                {stage.conversionFromPrevious !== undefined && (
-                  <span className="text-xs text-white/90 flex items-center gap-1">
-                    <ArrowRight className="w-3 h-3" />
-                    {stage.conversionFromPrevious.toFixed(1)}%
-                  </span>
-                )}
               </div>
             </div>
-
-            {/* Conversion Rate from Previous Stage */}
-            {index > 0 && stage.conversionFromPrevious !== undefined && (
-              <div className="text-xs text-muted-foreground pl-5">
-                Taxa de conversão do estágio anterior: {stage.conversionFromPrevious.toFixed(1)}%
-              </div>
-            )}
           </div>
         )
       })}

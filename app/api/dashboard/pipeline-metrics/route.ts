@@ -1,6 +1,97 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 
+// Helper function to identify negative final stages (Lost, Disqualified)
+function isNegativeFinalStage(stage: any): boolean {
+  const stageName = stage.name.toLowerCase()
+  return (
+    stageName.includes('perdido') ||
+    stageName.includes('lost') ||
+    stageName.includes('desqualificado') ||
+    stageName.includes('disqualified') ||
+    stageName.includes('cancelado') ||
+    stageName.includes('cancelled')
+  )
+}
+
+// Helper function to check if a contact belongs to a specific stage
+// Supports both new system (stage_id) and legacy system (funnel_stage)
+function shouldContactBeInStage(contact: any, stage: any, allStages: any[]): boolean {
+  // Priority 1: Use stage_id if available
+  if (contact.stage_id) {
+    return contact.stage_id === stage.id
+  }
+
+  // Priority 2: Fallback to funnel_stage mapping for legacy contacts
+  const funnelStage = contact.funnel_stage
+  if (!funnelStage) {
+    return false
+  }
+
+  // Map legacy funnel_stage to new stages based on order_position and flags
+  const stageName = stage.name.toLowerCase()
+  const orderPosition = stage.order_position
+
+  // Map based on funnel_stage value
+  switch (funnelStage) {
+    case 'new_lead':
+      // First stage or stage with "novo"/"new" in name
+      return orderPosition === 1 ||
+             stageName.includes('novo') ||
+             stageName.includes('new') ||
+             stageName.includes('lead')
+
+    case 'contacted':
+      // Second stage or stage with "contato"/"contacted" in name
+      return orderPosition === 2 ||
+             stageName.includes('contato') ||
+             stageName.includes('contacted') ||
+             stageName.includes('contact')
+
+    case 'meeting':
+    case 'reuniao':
+      // Third stage, stage with counts_as_meeting flag, or stage with "reunião"/"meeting" in name
+      return orderPosition === 3 ||
+             stage.counts_as_meeting === true ||
+             stageName.includes('reunião') ||
+             stageName.includes('reuniao') ||
+             stageName.includes('meeting') ||
+             stageName.includes('agendada')
+
+    case 'negotiation':
+    case 'negociacao':
+      // Fourth stage or stage with "negociação"/"negotiation" in name
+      return orderPosition === 4 ||
+             stageName.includes('negociação') ||
+             stageName.includes('negociacao') ||
+             stageName.includes('negotiation')
+
+    case 'won':
+    case 'closed':
+      // Stage with counts_as_sale flag or stage with "ganho"/"won"/"fechado" in name
+      return stage.counts_as_sale === true ||
+             stageName.includes('ganho') ||
+             stageName.includes('won') ||
+             stageName.includes('fechado') ||
+             stageName.includes('venda')
+
+    case 'lost':
+    case 'perdido':
+      // Stage with "perdido"/"lost" in name
+      return stageName.includes('perdido') ||
+             stageName.includes('lost')
+
+    case 'disqualified':
+    case 'desqualificado':
+      // Stage with "desqualificado"/"disqualified" in name
+      return stageName.includes('desqualificado') ||
+             stageName.includes('disqualified')
+
+    default:
+      return false
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient()
@@ -30,6 +121,7 @@ export async function GET(request: NextRequest) {
         id,
         name,
         color,
+        is_default,
         pipeline_stages (
           id,
           name,
@@ -80,8 +172,21 @@ export async function GET(request: NextRequest) {
       )
 
       // Filter contacts for this pipeline
+      // Include contacts with matching pipeline_id OR legacy contacts (no pipeline_id) if this is the default pipeline
       const pipelineContacts = (contacts || []).filter(
-        (contact: any) => contact.pipeline_id === pipeline.id
+        (contact: any) => {
+          // Direct match by pipeline_id
+          if (contact.pipeline_id === pipeline.id) {
+            return true
+          }
+
+          // Include legacy contacts (no pipeline_id) in the default pipeline if they have funnel_stage
+          if (!contact.pipeline_id && pipeline.is_default && contact.funnel_stage) {
+            return true
+          }
+
+          return false
+        }
       )
 
       const totalContacts = pipelineContacts.length
@@ -114,26 +219,35 @@ export async function GET(request: NextRequest) {
       const finalConversion = totalContacts > 0 ? (totalSales / totalContacts) * 100 : 0
       const meetingsPerSale = totalSales > 0 ? totalMeetings / totalSales : 0
 
-      // Build funnel data - count contacts per stage
+      // Build funnel data - count contacts per stage (CUMULATIVE)
       const funnel = stages.map((stage: any, index: number) => {
-        const stageContacts = pipelineContacts.filter(
-          (contact: any) => contact.stage_id === stage.id
-        )
+        let count: number
 
-        const count = stageContacts.length
+        // Check if this is a final stage (won/sale or negative outcome)
+        const isFinalStage = stage.counts_as_sale || isNegativeFinalStage(stage)
 
-        // Calculate conversion from previous stage
-        let conversionFromPrevious: number | undefined = undefined
-        if (index > 0) {
-          const previousStage = stages[index - 1]
-          const previousStageContacts = pipelineContacts.filter(
-            (contact: any) => contact.stage_id === previousStage.id
+        if (isFinalStage) {
+          // Final stages: count only contacts currently in this stage
+          const stageContacts = pipelineContacts.filter(
+            (contact: any) => shouldContactBeInStage(contact, stage, stages)
           )
-          const previousCount = previousStageContacts.length
+          count = stageContacts.length
+        } else {
+          // Intermediate stages: count contacts in this stage OR any later stage (except negative final stages)
+          // This creates a cumulative funnel showing how many reached or passed this stage
+          const eligibleStages = stages.filter((s: any) => {
+            // Include current stage and all stages with higher order_position
+            const isCurrentOrLater = s.order_position >= stage.order_position
+            // Exclude negative final stages (lost, disqualified) from cumulative count
+            const isNegativeFinal = isNegativeFinalStage(s)
+            return isCurrentOrLater && !isNegativeFinal
+          })
 
-          if (previousCount > 0) {
-            conversionFromPrevious = (count / previousCount) * 100
-          }
+          const cumulativeContacts = pipelineContacts.filter((contact: any) => {
+            return eligibleStages.some((s: any) => shouldContactBeInStage(contact, s, stages))
+          })
+
+          count = cumulativeContacts.length
         }
 
         return {
@@ -141,7 +255,6 @@ export async function GET(request: NextRequest) {
           stageName: stage.name,
           stageColor: stage.color,
           count,
-          conversionFromPrevious,
           countsAsMeeting: stage.counts_as_meeting || false,
           countsAsSale: stage.counts_as_sale || false,
         }

@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
       dealDuration: contact.deal_duration,
       sdrId: contact.sdr_id,
       closerId: contact.closer_id,
+      meetingDate: contact.meeting_date,
+      notes: contact.notes,
       createdAt: contact.created_at,
       updatedAt: contact.updated_at,
     }))
@@ -114,6 +116,8 @@ export async function POST(request: NextRequest) {
       whitelabel_id: user.whitelabel_id,
       sdr_id: body.sdrId,
       closer_id: body.closerId,
+      meeting_date: body.meetingDate,
+      notes: body.notes,
     }
 
     // Adicionar pipeline e stage se fornecidos
@@ -151,6 +155,8 @@ export async function POST(request: NextRequest) {
       assignedTo: contact.assigned_to,
       sdrId: contact.sdr_id,
       closerId: contact.closer_id,
+      meetingDate: contact.meeting_date,
+      notes: contact.notes,
       createdAt: contact.created_at,
       updatedAt: contact.updated_at,
     }
@@ -220,6 +226,8 @@ export async function PATCH(request: NextRequest) {
     if (updates.dealDuration !== undefined) updateData.deal_duration = updates.dealDuration
     if (updates.sdrId !== undefined) updateData.sdr_id = updates.sdrId
     if (updates.closerId !== undefined) updateData.closer_id = updates.closerId
+    if (updates.meetingDate !== undefined) updateData.meeting_date = updates.meetingDate
+    if (updates.notes !== undefined) updateData.notes = updates.notes
 
     // Sync funnel_stage when stageId changes
     if (updates.stageId !== undefined) {
@@ -268,6 +276,8 @@ export async function PATCH(request: NextRequest) {
       dealDuration: contact.deal_duration,
       sdrId: contact.sdr_id,
       closerId: contact.closer_id,
+      meetingDate: contact.meeting_date,
+      notes: contact.notes,
       createdAt: contact.created_at,
       updatedAt: contact.updated_at,
     }

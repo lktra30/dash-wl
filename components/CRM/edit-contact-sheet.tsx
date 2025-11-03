@@ -24,6 +24,7 @@ import type { Contact, PipelineWithStages, PipelineStage } from "@/lib/types"
 import { toast } from "sonner"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Employee {
   id: string
@@ -51,6 +52,7 @@ export function EditContactSheet({
   const [employees, setEmployees] = React.useState<Employee[]>([])
   const [pipelines, setPipelines] = React.useState<PipelineWithStages[]>([])
   const [selectedPipeline, setSelectedPipeline] = React.useState<PipelineWithStages | null>(null)
+  const [selectedStage, setSelectedStage] = React.useState<PipelineStage | null>(null)
   const [error, setError] = React.useState<string>("")
   const [previousStatus, setPreviousStatus] = React.useState(contact.status)
   const [formData, setFormData] = React.useState({
@@ -66,6 +68,8 @@ export function EditContactSheet({
     dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
     sdrId: (contact as any).sdrId || "",
     closerId: (contact as any).closerId || "",
+    meetingDate: (contact as any).meetingDate || "",
+    notes: (contact as any).notes || "",
   })
 
   // Load employees and pipelines when sheet opens
@@ -126,14 +130,24 @@ export function EditContactSheet({
       dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
       sdrId: (contact as any).sdrId || "",
       closerId: (contact as any).closerId || "",
+      meetingDate: (contact as any).meetingDate || "",
+      notes: (contact as any).notes || "",
     })
     setPreviousStatus(contact.status)
 
-    // Update selected pipeline when contact changes
+    // Update selected pipeline and stage when contact changes
     if ((contact as any).pipelineId && pipelines.length > 0) {
       const contactPipeline = pipelines.find((p: PipelineWithStages) => p.id === (contact as any).pipelineId)
       if (contactPipeline) {
         setSelectedPipeline(contactPipeline)
+
+        // Set selected stage
+        if ((contact as any).stageId) {
+          const contactStage = contactPipeline.stages.find((s: PipelineStage) => s.id === (contact as any).stageId)
+          if (contactStage) {
+            setSelectedStage(contactStage)
+          }
+        }
       }
     }
   }, [contact, pipelines])
@@ -269,6 +283,12 @@ export function EditContactSheet({
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleStageChange = (stageId: string) => {
+    const stage = selectedPipeline?.stages.find(s => s.id === stageId)
+    setSelectedStage(stage || null)
+    handleInputChange("stageId", stageId)
+  }
+
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent className="w-full sm:max-w-md">
@@ -379,7 +399,7 @@ export function EditContactSheet({
               </Label>
               <Select
                 value={formData.stageId}
-                onValueChange={(value) => handleInputChange("stageId", value)}
+                onValueChange={handleStageChange}
                 disabled={!selectedPipeline}
               >
                 <SelectTrigger id="edit-stage" className="h-11 cursor-pointer">
@@ -426,6 +446,37 @@ export function EditContactSheet({
                   <SelectItem value="outbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Outbound (Procuramos o lead)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Campo de Data de Reunião - condicional */}
+            {selectedStage?.countsAsMeeting && (
+              <div className="space-y-3">
+                <Label htmlFor="edit-meetingDate" className="text-sm font-semibold">
+                  Data da Reunião <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-meetingDate"
+                  type="datetime-local"
+                  value={formData.meetingDate}
+                  onChange={(e) => handleInputChange("meetingDate", e.target.value)}
+                  className="h-11 text-base"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Campo de Observações */}
+            <div className="space-y-3">
+              <Label htmlFor="edit-notes" className="text-sm font-semibold">
+                Observações
+              </Label>
+              <Textarea
+                id="edit-notes"
+                value={formData.notes}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                placeholder="Adicione observações sobre este lead..."
+                className="min-h-[100px] resize-none"
+              />
             </div>
 
             <div className="space-y-3">

@@ -23,6 +23,7 @@ import {
 import { Plus, AlertCircle } from "lucide-react"
 import { useTheme } from "@/hooks/use-theme"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 import type { Contact, PipelineWithStages, PipelineStage } from "@/lib/types"
 
 interface Employee {
@@ -44,6 +45,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
   const [employees, setEmployees] = React.useState<Employee[]>([])
   const [pipelines, setPipelines] = React.useState<PipelineWithStages[]>([])
   const [selectedPipeline, setSelectedPipeline] = React.useState<PipelineWithStages | null>(null)
+  const [selectedStage, setSelectedStage] = React.useState<PipelineStage | null>(null)
   const [error, setError] = React.useState<string>("")
   const [formData, setFormData] = React.useState({
     name: "",
@@ -56,6 +58,8 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
     leadSource: "" as "" | "inbound" | "outbound",
     sdrId: "",
     closerId: "",
+    meetingDate: "",
+    notes: "",
   })
 
   // Load employees and pipelines when sheet opens
@@ -77,8 +81,11 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         leadSource: "",
         sdrId: "",
         closerId: "",
+        meetingDate: "",
+        notes: "",
       })
       setSelectedPipeline(null)
+      setSelectedStage(null)
       setError("")
     }
   }, [open])
@@ -205,6 +212,12 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleStageChange = (stageId: string) => {
+    const stage = selectedPipeline?.stages.find(s => s.id === stageId)
+    setSelectedStage(stage || null)
+    handleInputChange("stageId", stageId)
+  }
+
   if (!canCreate) return null
 
   return (
@@ -323,7 +336,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
               </Label>
               <Select
                 value={formData.stageId}
-                onValueChange={(value) => handleInputChange("stageId", value)}
+                onValueChange={handleStageChange}
                 disabled={!selectedPipeline}
               >
                 <SelectTrigger id="stage" className="h-11 cursor-pointer">
@@ -370,6 +383,37 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                   <SelectItem value="outbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Outbound (Procuramos o lead)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Campo de Data de Reunião - condicional */}
+            {selectedStage?.countsAsMeeting && (
+              <div className="space-y-3">
+                <Label htmlFor="meetingDate" className="text-sm font-semibold">
+                  Data da Reunião <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="meetingDate"
+                  type="datetime-local"
+                  value={formData.meetingDate}
+                  onChange={(e) => handleInputChange("meetingDate", e.target.value)}
+                  className="h-11 text-base"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Campo de Observações */}
+            <div className="space-y-3">
+              <Label htmlFor="notes" className="text-sm font-semibold">
+                Observações
+              </Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                placeholder="Adicione observações sobre este lead..."
+                className="min-h-[100px] resize-none"
+              />
             </div>
 
             <div className="space-y-3">
