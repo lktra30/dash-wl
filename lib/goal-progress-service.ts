@@ -117,7 +117,7 @@ export async function getMeetingsProgress(
       .from('contacts')
       .select(`
         id,
-        updated_at,
+        meeting_date,
         funnel_stage,
         sdr_id,
         pipeline_stages!stage_id (
@@ -126,8 +126,9 @@ export async function getMeetingsProgress(
         )
       `)
       .eq('whitelabel_id', whitelabelId)
-      .gte('updated_at', startDate.toISOString())
-      .lte('updated_at', now.toISOString());
+      .not('meeting_date', 'is', null)
+      .gte('meeting_date', startDate.toISOString())
+      .lte('meeting_date', now.toISOString());
 
     if (employeeId) {
       query.eq('sdr_id', employeeId);
@@ -150,8 +151,9 @@ export async function getMeetingsProgress(
         contact.pipeline_stages?.counts_as_meeting === true ||
         contact.pipeline_stages?.counts_as_sale === true ||
         contact.funnel_stage === 'meeting' ||
-        contact.funnel_stage === 'reuniao' ||
-        contact.funnel_stage === 'won'
+        contact.funnel_stage === 'reuniao'
+        // REMOVED: contact.funnel_stage === 'won' - This was causing duplicate counting
+        // Sales are already counted via counts_as_sale flag above
       );
     }).length;
   };
@@ -253,11 +255,12 @@ export async function getSalesProgress(
   const buildDealsQuery = (startDate: Date) => {
     const query = supabase
       .from('deals')
-      .select('value, duration, updated_at')
+      .select('value, duration, sale_date')
       .eq('whitelabel_id', whitelabelId)
       .eq('status', 'won')
-      .gte('updated_at', startDate.toISOString())
-      .lte('updated_at', now.toISOString());
+      .not('sale_date', 'is', null)
+      .gte('sale_date', startDate.toISOString())
+      .lte('sale_date', now.toISOString());
 
     if (employeeId) {
       query.eq('closer_id', employeeId);

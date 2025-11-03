@@ -52,6 +52,7 @@ export interface Contact {
   pipelineId?: string // Pipeline this contact belongs to
   stageId?: string // Current stage/status in the pipeline
   meetingDate?: string // Scheduled meeting date/time
+  saleDate?: string // Date when the sale was closed/converted
   notes?: string // Open text field for observations and notes
   createdAt: string
   updatedAt: string
@@ -69,6 +70,7 @@ export interface Deal {
   sdrId?: string // SDR who sourced this deal
   closerId?: string // Closer who closed this deal
   expectedCloseDate?: string
+  saleDate?: string // Date when the deal was actually won/closed
   createdAt: string
   updatedAt: string
 }

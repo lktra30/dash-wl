@@ -105,14 +105,6 @@ export default function DashboardPage() {
     }
 
     loadDashboardData()
-
-    // Auto-refresh dashboard data every 30 seconds
-    const interval = setInterval(() => {
-      loadDashboardData()
-    }, 30000)
-
-    // Cleanup interval on unmount or dependency change
-    return () => clearInterval(interval)
   }, [user, authLoading, whitelabel, dateRange])
 
   // Load Meta Ads data - Cards filtered by dateRange, Chart shows 1 year
@@ -268,14 +260,6 @@ export default function DashboardPage() {
     }
 
     loadPipelineMetrics()
-
-    // Auto-refresh pipeline metrics every 30 seconds
-    const interval = setInterval(() => {
-      loadPipelineMetrics()
-    }, 30000)
-
-    // Cleanup interval on unmount or dependency change
-    return () => clearInterval(interval)
   }, [user, authLoading, dateRange])
 
   if (authLoading) {
