@@ -11,8 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ContactCard } from "./contact-card"
+import { SaleValueSheet } from "./sale-value-sheet"
 import { useTheme } from "@/hooks/use-theme"
-import type { Contact, PipelineWithStages } from "@/lib/types"
+import type { Contact, PipelineWithStages, PipelineStage } from "@/lib/types"
 import { toast } from "sonner"
 
 interface ContactsKanbanProps {
@@ -31,6 +32,13 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
   const [pipelines, setPipelines] = useState<PipelineWithStages[]>([])
   const [selectedPipeline, setSelectedPipeline] = useState<PipelineWithStages | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Sale value sheet states
+  const [saleSheetOpen, setSaleSheetOpen] = useState(false)
+  const [pendingMove, setPendingMove] = useState<{
+    contact: Contact
+    targetStageId: string
+  } | null>(null)
 
   // Carregar pipelines
   useEffect(() => {
@@ -167,25 +175,71 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
     setDragOverColumn(null)
 
     if (draggedContact && draggedContact.stageId !== newStageId) {
-      try {
-        // Atualizar contact com novo stageId
-        const response = await fetch(`/api/dashboard/contacts/${draggedContact.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stageId: newStageId }),
-        })
-
-        if (!response.ok) throw new Error("Failed to update contact")
-
-        // Recarregar contatos
-        onContactUpdated()
-        toast.success("Contato movido com sucesso!")
-      } catch (error) {
-        console.error("Error updating contact:", error)
-        toast.error("Erro ao mover contato")
+      // Verificar se o estágio de destino contabiliza como venda
+      const targetStage = selectedPipeline?.stages.find(s => s.id === newStageId)
+      
+      if (targetStage?.countsAsSale) {
+        // Verificar se o contato já tem dealValue preenchido
+        if (!draggedContact.dealValue || draggedContact.dealValue <= 0) {
+          // Precisa solicitar o valor da venda
+          setPendingMove({
+            contact: draggedContact,
+            targetStageId: newStageId
+          })
+          setSaleSheetOpen(true)
+          setDraggedContact(null)
+          return
+        }
       }
+
+      // Se não é venda ou já tem dealValue, proceder normalmente
+      await executeStageMove(draggedContact.id, newStageId)
     }
     setDraggedContact(null)
+  }
+
+  // Função para executar a movimentação de estágio
+  const executeStageMove = async (contactId: string, newStageId: string, dealValue?: number, dealDuration?: number) => {
+    try {
+      const updateData: any = { stageId: newStageId }
+      
+      if (dealValue !== undefined) {
+        updateData.dealValue = dealValue
+      }
+      if (dealDuration !== undefined) {
+        updateData.dealDuration = dealDuration
+      }
+
+      const response = await fetch(`/api/dashboard/contacts/${contactId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      })
+
+      if (!response.ok) throw new Error("Failed to update contact")
+
+      // Recarregar contatos
+      onContactUpdated()
+      toast.success("Contato movido com sucesso!")
+    } catch (error) {
+      console.error("Error updating contact:", error)
+      toast.error("Erro ao mover contato")
+    }
+  }
+
+  // Função chamada quando o usuário confirma os dados da venda no sheet
+  const handleSaleConfirm = async (dealValue: number, dealDuration: number) => {
+    if (!pendingMove) return
+
+    await executeStageMove(
+      pendingMove.contact.id,
+      pendingMove.targetStageId,
+      dealValue,
+      dealDuration
+    )
+
+    // Limpar estado pendente
+    setPendingMove(null)
   }
 
   const handleDragEnd = () => {
@@ -219,10 +273,10 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
   }
 
   return (
-    <div className="flex flex-col flex-1 space-y-4">
+    <div className="flex flex-col h-full overflow-hidden min-h-0">
       {/* Seletor de Pipeline */}
       {pipelines.length > 1 && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0 mb-4">
           <span className="text-sm font-medium">Pipeline:</span>
           <Select
             value={selectedPipeline.id}
@@ -253,100 +307,107 @@ export function ContactsKanban({ contacts, onUpdateContact, onContactUpdated, da
         </div>
       )}
 
-      {/* Kanban Columns */}
-      <div
-        className="grid gap-4 overflow-auto flex-1"
-        style={{
-          gridTemplateColumns: `repeat(${selectedPipeline.stages.length}, minmax(280px, 1fr))`,
-        }}
-      >
-        {selectedPipeline.stages.map((stage) => {
-          const isBeingDraggedOver = dragOverColumn === stage.id
-          const isDraggedFromHere = draggedContact?.stageId === stage.id
-          const stageContacts = getContactsByStage(stage.id)
+      {/* Kanban Columns - Container com scroll horizontal */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
+        <div className="flex flex-row gap-4 h-full pb-4">
+          {selectedPipeline.stages.map((stage) => {
+            const isBeingDraggedOver = dragOverColumn === stage.id
+            const isDraggedFromHere = draggedContact?.stageId === stage.id
+            const stageContacts = getContactsByStage(stage.id)
 
-          return (
-            <Card
-              key={stage.id}
-              className={`h-full flex flex-col transition-all duration-200 ${
-                isDraggedFromHere ? "opacity-90" : ""
-              }`}
-              style={
-                isBeingDraggedOver
-                  ? {
-                      boxShadow: `0 0 0 2px ${stage.color}`,
-                      backgroundColor: `${stage.color}0D`, // 5% opacity
-                    }
-                  : undefined
-              }
-              onDragOver={(e) => handleDragOver(e, stage.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, stage.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: stage.color }}
+            return (
+              <Card
+                key={stage.id}
+                className={`flex flex-col transition-all duration-200 h-full w-[300px] flex-shrink-0 ${
+                  isDraggedFromHere ? "opacity-90" : ""
+                }`}
+                style={
+                  isBeingDraggedOver
+                    ? {
+                        boxShadow: `0 0 0 2px ${stage.color}`,
+                        backgroundColor: `${stage.color}0D`, // 5% opacity
+                      }
+                    : undefined
+                }
+                onDragOver={(e) => handleDragOver(e, stage.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.id)}
+              >
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <CardTitle className="text-sm font-medium">
+                        {stage.name}
+                      </CardTitle>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs"
+                      style={{
+                        backgroundColor: `${stage.color}1A`, // 10% opacity
+                        color: stage.color,
+                        borderColor: `${stage.color}33`, // 20% opacity
+                      }}
+                    >
+                      {stageContacts.length}
+                    </Badge>
+                  </div>
+                  {/* Badges de contabilização */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {stage.countsAsMeeting && (
+                      <Badge variant="outline" className="text-xs">
+                        Reunião
+                      </Badge>
+                    )}
+                    {stage.countsAsSale && (
+                      <Badge variant="outline" className="text-xs">
+                        Venda
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 overflow-y-auto flex-1 min-h-0">
+                  {stageContacts.map((contact) => (
+                    <ContactCard
+                      key={contact.id}
+                      contact={contact}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onContactUpdated={onContactUpdated}
+                      dataService={dataService}
+                      isDragging={draggedContact?.id === contact.id}
+                      currentStage={stage}
                     />
-                    <CardTitle className="text-sm font-medium">
-                      {stage.name}
-                    </CardTitle>
-                  </div>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs"
-                    style={{
-                      backgroundColor: `${stage.color}1A`, // 10% opacity
-                      color: stage.color,
-                      borderColor: `${stage.color}33`, // 20% opacity
-                    }}
-                  >
-                    {stageContacts.length}
-                  </Badge>
-                </div>
-                {/* Badges de contabilização */}
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {stage.countsAsMeeting && (
-                    <Badge variant="outline" className="text-xs">
-                      Reunião
-                    </Badge>
-                  )}
-                  {stage.countsAsSale && (
-                    <Badge variant="outline" className="text-xs">
-                      Venda
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 overflow-y-auto flex-1">
-                {stageContacts.map((contact) => (
-                  <ContactCard
-                    key={contact.id}
-                    contact={contact}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onContactUpdated={onContactUpdated}
-                    dataService={dataService}
-                    isDragging={draggedContact?.id === contact.id}
-                  />
-                ))}
+                  ))}
 
-                {stageContacts.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-xs">
-                      {isBeingDraggedOver
-                        ? "Arraste aqui"
-                        : "Sem leads nesta etapa"}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+                  {stageContacts.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-xs">
+                        {isBeingDraggedOver
+                          ? "Arraste aqui"
+                          : "Sem leads nesta etapa"}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
+
+      {/* Sheet para solicitar valor da venda */}
+      <SaleValueSheet
+        open={saleSheetOpen}
+        onOpenChange={setSaleSheetOpen}
+        contact={pendingMove?.contact || null}
+        targetStage={selectedPipeline?.stages.find(s => s.id === pendingMove?.targetStageId) || null}
+        onConfirm={handleSaleConfirm}
+      />
     </div>
   )
 }

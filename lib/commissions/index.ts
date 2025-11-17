@@ -143,6 +143,13 @@ function groupDealsByEmployee(deals: Deal[], role: "sdr" | "closer"): Map<string
   return grouped
 }
 
+/**
+ * Calcula a comissão para um funcionário baseado em seus deals
+ * 
+ * O cálculo respeita o businessModel:
+ * - TCV: comissão sobre valor total do contrato
+ * - MRR: comissão sobre valor mensal recorrente
+ */
 function calculateEmployeeCommission(
   deals: Deal[],
   settings: CommissionSettings,
@@ -236,26 +243,53 @@ export function calculateSDRCommissionsFromDeals(
   settings: CommissionSettings,
   businessModel: "TCV" | "MRR" = "TCV"
 ): RoleCommissionSummary {
-  const filteredDeals = deals.filter((deal) => !!deal.sdrId)
+  // Filter out orphan deals (deals without a valid contact) and deals without SDR
+  const filteredDeals = deals.filter((deal) => !!deal.sdrId && !!deal.contactId)
   return calculateRoleCommissions(filteredDeals, settings, "sdr", businessModel)
 }
 
 export function calculateCloserCommissionsFromDeals(
   deals: Deal[],
   settings: CommissionSettings,
-  businessModel: "TCV" | "MRR" = "TCV"
+  businessModel: "TCV" | "MRR" = "TCV",
+  contacts?: any[] // Optional contacts array to find closerId
 ): RoleCommissionSummary {
-  const filteredDeals = deals.filter((deal) => deal.status === "won" && !!deal.closerId)
+  // If contacts provided, use them to find closerId
+  if (contacts && contacts.length > 0) {
+    const filteredDeals = deals.filter((deal) => {
+      if (deal.status !== "won" || !deal.contactId) return false
+      const contact = contacts.find(c => c.id === deal.contactId)
+      return contact && (contact.closerId || deal.closerId)
+    })
+    
+    // Map deals to include closerId from contact
+    const dealsWithCloser = filteredDeals.map(deal => {
+      const contact = contacts.find(c => c.id === deal.contactId)
+      return {
+        ...deal,
+        closerId: contact?.closerId || deal.closerId || deal.assignedTo
+      }
+    }).filter(deal => !!deal.closerId)
+    
+    return calculateRoleCommissions(dealsWithCloser, settings, "closer", businessModel)
+  }
+  
+  // Fallback to original logic
+  const filteredDeals = deals.filter((deal) => deal.status === "won" && !!deal.closerId && !!deal.contactId)
   return calculateRoleCommissions(filteredDeals, settings, "closer", businessModel)
 }
 
 export function calculateTotalCommissionsCard(
   deals: Deal[],
   settings: CommissionSettings,
-  businessModel: "TCV" | "MRR" = "TCV"
+  businessModel: "TCV" | "MRR" = "TCV",
+  contacts?: any[] // Optional contacts array
 ): TotalCommissionsCard {
-  const sdrSummary = calculateSDRCommissionsFromDeals(deals, settings, businessModel)
-  const closerSummary = calculateCloserCommissionsFromDeals(deals, settings, businessModel)
+  // Only consider valid deals with contacts for commission calculations
+  const validDeals = deals.filter((deal) => !!deal.contactId)
+  
+  const sdrSummary = calculateSDRCommissionsFromDeals(validDeals, settings, businessModel)
+  const closerSummary = calculateCloserCommissionsFromDeals(validDeals, settings, businessModel, contacts)
 
   return {
     totalCommissions: sdrSummary.totalCommissions + closerSummary.totalCommissions,
@@ -264,6 +298,6 @@ export function calculateTotalCommissionsCard(
     sdrCount: sdrSummary.employeeCount,
     closerCount: closerSummary.employeeCount,
     totalSales: sdrSummary.totalSales + closerSummary.totalSales,
-    totalDeals: deals.length,
+    totalDeals: validDeals.length,
   }
 }

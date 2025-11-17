@@ -189,11 +189,11 @@ export function PipelineComparisonCard({
         {pipelines.length > 1 && (
           <div className="pt-4 border-t mt-6">
             <div className="text-sm text-muted-foreground">
-              Total de pipelines: <span className="font-semibold text-foreground">{pipelines.length}</span> •
-              Total de leads: <span className="font-semibold text-foreground">
+              Total de pipelines: <span className="font-semibold" style={{ color: brandColor }}>{pipelines.length}</span> •
+              Total de leads: <span className="font-semibold" style={{ color: brandColor }}>
                 {pipelines.reduce((sum, p) => sum + p.metrics.totalContacts, 0)}
               </span> •
-              Total de vendas: <span className="font-semibold text-foreground">
+              Total de vendas: <span className="font-semibold" style={{ color: brandColor }}>
                 {pipelines.reduce((sum, p) => sum + p.metrics.totalSales, 0)}
               </span>
             </div>

@@ -55,6 +55,24 @@ export function EditContactSheet({
   const [selectedStage, setSelectedStage] = React.useState<PipelineStage | null>(null)
   const [error, setError] = React.useState<string>("")
   const [previousStatus, setPreviousStatus] = React.useState(contact.status)
+  
+  // Helper function to format ISO datetime to datetime-local input format
+  const formatDateTimeLocal = (isoString: string | undefined | null): string => {
+    if (!isoString) return ""
+    try {
+      const date = new Date(isoString)
+      // Format: YYYY-MM-DDTHH:mm
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}`
+    } catch {
+      return ""
+    }
+  }
+  
   const [formData, setFormData] = React.useState({
     name: contact.name,
     email: contact.email,
@@ -64,12 +82,13 @@ export function EditContactSheet({
     stageId: (contact as any).stageId || "",
     status: contact.status,
     leadSource: (contact as any).leadSource || "",
-    dealValue: contact.dealValue || 0,
+    dealValue: contact.dealValue ?? 0,
     dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
     sdrId: (contact as any).sdrId || "",
     closerId: (contact as any).closerId || "",
-    meetingDate: (contact as any).meetingDate || "",
-    notes: (contact as any).notes || "",
+    meetingDate: formatDateTimeLocal((contact as any).meetingDate),
+    saleDate: formatDateTimeLocal((contact as any).saleDate),
+    notes: (contact as any).notes ?? "",
   })
 
   // Load employees and pipelines when sheet opens
@@ -126,12 +145,13 @@ export function EditContactSheet({
       stageId: (contact as any).stageId || "",
       status: contact.status,
       leadSource: (contact as any).leadSource || "",
-      dealValue: contact.dealValue || 0,
+      dealValue: contact.dealValue ?? 0,
       dealDuration: contact.dealDuration ? Math.round(contact.dealDuration / 30) : 0, // Convert days to months
       sdrId: (contact as any).sdrId || "",
       closerId: (contact as any).closerId || "",
-      meetingDate: (contact as any).meetingDate || "",
-      notes: (contact as any).notes || "",
+      meetingDate: formatDateTimeLocal((contact as any).meetingDate),
+      saleDate: formatDateTimeLocal((contact as any).saleDate),
+      notes: (contact as any).notes ?? "",
     })
     setPreviousStatus(contact.status)
 
@@ -226,6 +246,38 @@ export function EditContactSheet({
         setError(`O estágio "${currentStage.name}" requer que um Closer seja selecionado.`)
         return
       }
+
+      // Validar campos obrigatórios quando o estágio representa venda
+      if (currentStage.countsAsSale || currentStage.requiresDealValue) {
+        if (!formData.dealValue || formData.dealValue <= 0) {
+          setError(`O estágio "${currentStage.name}" requer que um valor de venda seja preenchido.`)
+          return
+        }
+        
+        // Se é venda, SEMPRE teve reunião antes
+        if (currentStage.countsAsSale) {
+          if (!formData.meetingDate) {
+            setError(`O estágio "${currentStage.name}" requer que uma data de reunião seja preenchida (toda venda teve uma reunião antes).`)
+            return
+          }
+          
+          if (!formData.saleDate) {
+            setError(`O estágio "${currentStage.name}" requer que uma data de venda seja preenchida.`)
+            return
+          }
+
+          // Validar que a reunião foi antes da venda
+          if (formData.meetingDate && formData.saleDate) {
+            const meetingDateTime = new Date(formData.meetingDate).getTime()
+            const saleDateTime = new Date(formData.saleDate).getTime()
+            
+            if (meetingDateTime >= saleDateTime) {
+              setError("A data da reunião deve ser anterior à data da venda.")
+              return
+            }
+          }
+        }
+      }
     }
 
     // Validate won status before submitting
@@ -259,10 +311,12 @@ export function EditContactSheet({
         stageId: formData.stageId,
         status: formData.status,
         leadSource: formData.leadSource || undefined,
-        dealValue: (formData.status === "won" || formData.status === "lost") ? formData.dealValue : undefined,
-        dealDuration: (formData.status === "won" || formData.status === "lost") ? (formData.dealDuration) : undefined,
+        dealValue: (formData.status === "won" || formData.status === "lost" || currentStage?.countsAsSale || currentStage?.requiresDealValue) ? formData.dealValue : undefined,
+        dealDuration: (formData.status === "won" || formData.status === "lost" || currentStage?.countsAsSale) ? (formData.dealDuration) : undefined,
         sdrId: formData.sdrId || undefined,
         closerId: formData.closerId || undefined,
+        meetingDate: formData.meetingDate || undefined,
+        saleDate: formData.saleDate || undefined,
       })
 
       // Close sheet
@@ -291,7 +345,7 @@ export function EditContactSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="w-[40vw] min-w-[500px] max-w-[800px]">
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Editar Contato</SheetTitle>
           <SheetDescription>
@@ -380,7 +434,7 @@ export function EditContactSheet({
                     </SelectItem>
                   ) : (
                     pipelines.map(pipeline => (
-                      <SelectItem key={pipeline.id} value={pipeline.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                      <SelectItem key={pipeline.id} value={pipeline.id}>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: pipeline.color }} />
                           {pipeline.name}
@@ -402,7 +456,7 @@ export function EditContactSheet({
                 onValueChange={handleStageChange}
                 disabled={!selectedPipeline}
               >
-                <SelectTrigger id="edit-stage" className="h-11 cursor-pointer">
+                <SelectTrigger id="edit-stage" className="h-11">
                   <SelectValue placeholder="Selecione um estágio" />
                 </SelectTrigger>
                 <SelectContent>
@@ -416,7 +470,7 @@ export function EditContactSheet({
                     </SelectItem>
                   ) : (
                     selectedPipeline.stages.map(stage => (
-                      <SelectItem key={stage.id} value={stage.id} className="cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                      <SelectItem key={stage.id} value={stage.id}>
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
                           {stage.name}
@@ -438,21 +492,24 @@ export function EditContactSheet({
                 value={formData.leadSource}
                 onValueChange={(value) => handleInputChange("leadSource", value)}
               >
-                <SelectTrigger id="edit-leadSource" className="h-11 cursor-pointer">
+                <SelectTrigger id="edit-leadSource" className="h-11">
                   <SelectValue placeholder="Selecione a origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="inbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Inbound (Lead veio até nós)</SelectItem>
-                  <SelectItem value="outbound" className="cursor-pointer hover:bg-accent hover:text-accent-foreground">Outbound (Procuramos o lead)</SelectItem>
+                  <SelectItem value="inbound">Inbound (Lead veio até nós)</SelectItem>
+                  <SelectItem value="outbound">Outbound (Procuramos o lead)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Campo de Data de Reunião - condicional */}
-            {selectedStage?.countsAsMeeting && (
+            {(selectedStage?.countsAsMeeting || selectedStage?.countsAsSale) && (
               <div className="space-y-3">
                 <Label htmlFor="edit-meetingDate" className="text-sm font-semibold">
                   Data da Reunião <span className="text-destructive">*</span>
+                  {selectedStage?.countsAsSale && (
+                    <span className="text-xs text-muted-foreground ml-2">(Toda venda teve uma reunião antes)</span>
+                  )}
                 </Label>
                 <Input
                   id="edit-meetingDate"
@@ -463,6 +520,62 @@ export function EditContactSheet({
                   required
                 />
               </div>
+            )}
+
+            {/* Campos de Venda - condicional quando estágio representa venda */}
+            {(selectedStage?.countsAsSale || selectedStage?.requiresDealValue || formData.status === "won" || formData.status === "lost") && (
+              <>
+                {selectedStage?.countsAsSale && (
+                  <div className="space-y-3">
+                    <Label htmlFor="edit-saleDate" className="text-sm font-semibold">
+                      Data da Venda <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="edit-saleDate"
+                      type="datetime-local"
+                      value={formData.saleDate}
+                      onChange={(e) => handleInputChange("saleDate", e.target.value)}
+                      className="h-11 text-base"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <Label htmlFor="edit-dealValue" className="text-sm font-semibold">
+                    Valor da Venda {(selectedStage?.countsAsSale || selectedStage?.requiresDealValue || formData.status === "won") && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Input
+                    id="edit-dealValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.dealValue}
+                    onChange={(e) => handleInputChange("dealValue", e.target.value)}
+                    placeholder="0.00"
+                    className="h-11 text-base"
+                    required={selectedStage?.countsAsSale || selectedStage?.requiresDealValue || formData.status === "won"}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="edit-dealDuration" className="text-sm font-semibold">
+                    Duração (em meses) {(selectedStage?.countsAsSale || formData.status === "won") && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Input
+                    id="edit-dealDuration"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.dealDuration}
+                    onChange={(e) => handleInputChange("dealDuration", e.target.value)}
+                    placeholder="0"
+                    className="h-11 text-base"
+                    disabled={formData.status === "lost"}
+                    required={selectedStage?.countsAsSale || formData.status === "won"}
+                  />
+                </div>
+              </>
             )}
 
             {/* Campo de Observações */}
@@ -568,46 +681,6 @@ export function EditContactSheet({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Conditional fields for Won/Lost status */}
-            {(formData.status === "won" || formData.status === "lost") && (
-              <>
-                <div className="space-y-3">
-                  <Label htmlFor="edit-dealValue" className="text-sm font-semibold">
-                    Valor da Oferta <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="edit-dealValue"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.dealValue}
-                    onChange={(e) => handleInputChange("dealValue", e.target.value)}
-                    placeholder="0.00"
-                    className="h-11 text-base"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="edit-dealDuration" className="text-sm font-semibold">
-                    Duração (em meses) {formData.status === "won" && <span className="text-destructive">*</span>}
-                  </Label>
-                  <Input
-                    id="edit-dealDuration"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.dealDuration}
-                    onChange={(e) => handleInputChange("dealDuration", e.target.value)}
-                    placeholder="0"
-                    className="h-11 text-base"
-                    disabled={formData.status === "lost"}
-                    required={formData.status === "won"}
-                  />
-                </div>
-              </>
-            )}
           </div>
 
           <SheetFooter className="flex-row px-4 pt-4">

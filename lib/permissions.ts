@@ -95,30 +95,48 @@ export async function getAuthenticatedEmployee(authEmail: string): Promise<{ emp
 
 /**
  * Get user role with fallback logic:
- * 1. If employee exists, use employee.user_role
- * 2. If employee doesn't exist, check users table
- * 3. If user.role is admin/SuperAdmin, grant admin access
- * 4. Otherwise, treat as colaborador
+ * 1. Check both employee and users tables
+ * 2. If user has SuperAdmin in either table, return SuperAdmin
+ * 3. If user has admin in either table, return admin
+ * 4. Otherwise, use employee.user_role or map from users.role
+ * 5. Default to colaborador if no role found
  */
 export async function getUserRoleWithFallback(authEmail: string, userFromUsersTable?: any): Promise<string> {
-  // First, try to get employee
+  // Get employee role
   const { employee } = await getAuthenticatedEmployee(authEmail)
+  const employeeRole = employee?.user_role
   
-  if (employee) {
-    return employee.user_role
-  }
-  
-  // If no employee, check users table
+  // Get users table role
+  let usersTableRole: string | null = null
   if (userFromUsersTable?.role) {
     const userRole = userFromUsersTable.role.toLowerCase()
-    // Admin and SuperAdmin from users table get full admin access
+    // Map users table roles to standard roles
     if (userRole === 'admin' || userRole === 'superadmin') {
-      return 'admin'
+      usersTableRole = userRole === 'superadmin' ? 'SuperAdmin' : 'admin'
+    } else if (userRole === 'manager') {
+      usersTableRole = 'gestor'
     }
-    // Manager gets gestor access
-    if (userRole === 'manager') {
-      return 'gestor'
-    }
+  }
+  
+  // Priority: SuperAdmin > admin > gestor > colaborador
+  // If either table has SuperAdmin, use it
+  if (employeeRole === 'SuperAdmin' || usersTableRole === 'SuperAdmin') {
+    return 'SuperAdmin'
+  }
+  
+  // If either table has admin, use it
+  if (employeeRole === 'admin' || usersTableRole === 'admin') {
+    return 'admin'
+  }
+  
+  // If employee exists, use their role
+  if (employeeRole) {
+    return employeeRole
+  }
+  
+  // Otherwise use users table role if available
+  if (usersTableRole) {
+    return usersTableRole
   }
   
   // Default to colaborador if no special role found

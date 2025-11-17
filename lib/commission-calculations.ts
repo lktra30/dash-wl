@@ -7,6 +7,22 @@ import {
 } from './types'
 
 /**
+ * Calcula o valor de vendas baseado no modelo de negócio
+ */
+function calculateDealValue(deal: Deal, businessModel: "TCV" | "MRR"): number {
+  if (businessModel === "MRR") {
+    const value = Number(deal.value) || 0
+    const duration = Number(deal.duration) || 0
+    
+    if (duration > 0) {
+      return value / duration
+    }
+    return 0
+  }
+  return Number(deal.value) || 0
+}
+
+/**
  * Determine which checkpoint tier has been achieved
  * @param achievementPercent - Percentage of target achieved (0-100+)
  * @param settings - Commission settings containing checkpoint thresholds
@@ -32,7 +48,8 @@ export function determineCheckpointTier(
       multiplier: settings.checkpoint1CommissionPercent / 100 
     }
   }
-  return { tier: 0, multiplier: 0 }
+  // Below checkpoint 1: still get 100% of base commission (no bonus)
+  return { tier: 0, multiplier: 1 }
 }
 
 /**
@@ -206,15 +223,65 @@ export function getCloserMetricsForPeriod(
   userId: string,
   userName: string,
   periodMonth: number,
-  periodYear: number
+  periodYear: number,
+  businessModel: "TCV" | "MRR" = "TCV"
 ): CloserMetrics {
-  // Filter won deals assigned to this closer
+  // Filter won deals assigned to this closer (check both closerId and assignedTo)
   const wonDeals = deals.filter(
-    d => d.status === 'won' && d.assignedTo === userId
+    d => d.status === 'won' && (d.closerId === userId || d.assignedTo === userId)
   )
   
-  const totalSales = wonDeals.reduce((sum, deal) => sum + deal.value, 0)
+  const totalSales = wonDeals.reduce((sum, deal) => sum + calculateDealValue(deal, businessModel), 0)
   const salesCount = wonDeals.length
+  
+  const commission = calculateCloserCommission(totalSales, salesCount, settings)
+  
+  return {
+    userId,
+    userName,
+    periodMonth,
+    periodYear,
+    totalSales,
+    salesCount,
+    salesTarget: settings.closerSalesTarget,
+    targetAchievementPercent: commission.targetAchievementPercent,
+    baseCommission: commission.baseCommission,
+    checkpointTier: commission.checkpointTier,
+    finalCommission: commission.finalCommission
+  }
+}
+
+/**
+ * Get Closer metrics for a specific period using contacts to find closerId
+ * @param deals - All deals
+ * @param contacts - All contacts
+ * @param settings - Commission settings
+ * @returns Complete Closer metrics
+ */
+export function getCloserMetricsWithContacts(
+  deals: Deal[],
+  contacts: any[], // Contact[] - using any to avoid circular import
+  settings: CommissionSettings,
+  userId: string,
+  userName: string,
+  periodMonth: number,
+  periodYear: number,
+  businessModel: "TCV" | "MRR" = "TCV"
+): CloserMetrics {
+  // Get won deals
+  const wonDeals = deals.filter(d => d.status === 'won')
+  
+  // Find deals where the contact has this user as closerId
+  const closerDeals = wonDeals.filter(deal => {
+    const contact = contacts.find(c => c.id === deal.contactId)
+    if (contact) {
+      return contact.closerId === userId || contact.assignedTo === userId || deal.assignedTo === userId
+    }
+    return deal.assignedTo === userId
+  })
+  
+  const totalSales = closerDeals.reduce((sum, deal) => sum + calculateDealValue(deal, businessModel), 0)
+  const salesCount = closerDeals.length
   
   const commission = calculateCloserCommission(totalSales, salesCount, settings)
   

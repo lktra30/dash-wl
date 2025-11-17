@@ -44,8 +44,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="p-1 md:p-2 bg-sidebar min-h-screen">
-          <div className="bg-background rounded-xl flex flex-col min-h-[calc(100vh-2rem)] md:min-h-[calc(100vh-3rem)]">
+        <div className="p-1 md:p-2 bg-sidebar h-screen">
+          <div className="bg-background rounded-xl flex flex-col h-[calc(100vh-0.5rem)] md:h-[calc(100vh-1rem)]">
             {children}
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   UserRound,
   BarChart3,
   ChevronRight,
+  Calendar,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -46,10 +47,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 const navigationMain = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "CRM", url: "/dashboard/CRM", icon: Users },
-  { title: "Comissões", url: "/dashboard/Comissoes", icon: Briefcase },
+  { title: "Calendário", url: "/dashboard/Calendario", icon: Calendar },
+  { title: "Metas e Comissões", url: "/dashboard/Comissoes", icon: Briefcase },
   { title: "Equipes", url: "/dashboard/Times", icon: Trophy },
   // { title: "Anúncios", url: "/dashboard/Ads", icon: BarChart3 },
-  // { title: "Métricas", url: "/dashboard/Metricas", icon: Activity },
+  { title: "Métricas", url: "/dashboard/Metricas", icon: Activity },
 ]
 
 const navigationSettings = [
@@ -211,7 +213,7 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center cursor-pointer"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!w-full group-data-[collapsible=icon]:!justify-center"
                   tooltip={user.name}
                 >
                   <Avatar className="h-8 w-8 rounded-lg shrink-0">
@@ -238,7 +240,7 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
                   <div className="mt-1 capitalize">{user.role}</div>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair
                 </DropdownMenuItem>

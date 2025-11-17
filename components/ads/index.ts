@@ -6,3 +6,4 @@ export { GoogleAdsCampaignTable } from "./google-ads-campaign-table"
 // Meta Ads components for main page
 export { MetaAdsMainCards } from "./meta-ads-main-cards"
 export { MetaAdsMonthlyChart } from "./meta-ads-monthly-chart"
+export { MetaAdsDailyChart } from "./meta-ads-daily-chart"

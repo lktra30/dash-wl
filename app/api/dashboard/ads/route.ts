@@ -60,14 +60,21 @@ export async function GET(request: NextRequest) {
     let timeIncrement: string
 
     if (requestType === "chart") {
-      // Chart: Always show last 1 year with monthly increment
-      const today = new Date()
-      const oneYearAgo = new Date()
-      oneYearAgo.setFullYear(today.getFullYear() - 1)
+      // Chart: Show current month day by day
+      const fromParam = searchParams.get("from")
+      const toParam = searchParams.get("to")
       
-      since = oneYearAgo.toISOString().split('T')[0]
-      until = today.toISOString().split('T')[0]
-      timeIncrement = "monthly"
+      if (fromParam && toParam) {
+        since = fromParam
+        until = toParam
+      } else {
+        // Default to current month
+        const today = new Date()
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+        since = firstDay.toISOString().split('T')[0]
+        until = today.toISOString().split('T')[0]
+      }
+      timeIncrement = "1" // Daily for chart
     } else {
       // Cards: Use date range from query params (filtered by page)
       const fromParam = searchParams.get("from")
@@ -117,11 +124,30 @@ export async function GET(request: NextRequest) {
 
     const totalLeads = leadsCount || 0
 
+    // Get sales count from Supabase for the period (contacts in stages that count as sales)
+    // Using contacts with stage_id referencing pipeline_stages where counts_as_sale = true
+    const { data: salesData, error: salesError } = await supabase
+      .from("contacts")
+      .select(`
+        id,
+        stage_id,
+        pipeline_stages!inner(counts_as_sale)
+      `)
+      .eq("pipeline_stages.counts_as_sale", true)
+      .gte("created_at", since)
+      .lte("created_at", until)
+
+    if (salesError) {
+      console.error("Error fetching sales count:", salesError)
+    }
+
+    const totalSales = salesData?.length || 0
+
     // Calculate aggregated metrics
-    const metrics = calculateMetrics(insights, totalLeads)
+    const metrics = calculateMetrics(insights, totalLeads, totalSales)
 
     // Transform data for time series
-    const timeSeries = transformTimeSeriesData(insights)
+    const timeSeries = transformTimeSeriesData(insights, since, until)
 
     // Get campaign performance details
     const campaigns = transformCampaignData(insights)
@@ -143,7 +169,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Calculate aggregated metrics from insights data
-function calculateMetrics(insights: any[], totalLeads: number = 0) {
+function calculateMetrics(insights: any[], totalLeads: number = 0, totalSales: number = 0) {
   let totalSpend = 0
   let totalClicks = 0
   let totalImpressions = 0
@@ -178,8 +204,8 @@ function calculateMetrics(insights: any[], totalLeads: number = 0) {
   // Calculate metrics
   const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0
   const roi = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0
-  // CAC agora é calculado usando totalLeads ao invés de totalPurchases
-  const cac = totalLeads > 0 ? totalSpend / totalLeads : 0
+  // CAC calculado usando vendas do sistema (contacts em estágios que contam como venda)
+  const cac = totalSales > 0 ? totalSpend / totalSales : 0
   const cpc = totalClicks > 0 ? totalSpend / totalClicks : 0
   const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
 
@@ -195,12 +221,31 @@ function calculateMetrics(insights: any[], totalLeads: number = 0) {
     cpc: parseFloat(cpc.toFixed(2)),
     ctr: parseFloat(ctr.toFixed(2)),
     totalLeads,
+    totalSales,
   }
 }
 
 // Transform data for time series charts
-function transformTimeSeriesData(insights: any[]) {
+function transformTimeSeriesData(insights: any[], since?: string, until?: string) {
   const timeSeriesMap = new Map<string, any>()
+
+  // If date range is provided, initialize all days with zero values
+  if (since && until) {
+    const startDate = new Date(since)
+    const endDate = new Date(until)
+    
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split("T")[0]
+      timeSeriesMap.set(dateStr, {
+        date: dateStr,
+        spend: 0,
+        revenue: 0,
+        clicks: 0,
+        impressions: 0,
+        purchases: 0,
+      })
+    }
+  }
 
   insights.forEach((insight) => {
     const date = insight.date_start || new Date().toISOString().split("T")[0]

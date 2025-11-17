@@ -11,7 +11,7 @@ BEGIN
     PERFORM create_default_pipeline(NEW.id);
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger que executa após inserir um novo whitelabel
 DROP TRIGGER IF EXISTS trigger_auto_create_pipeline ON whitelabels;

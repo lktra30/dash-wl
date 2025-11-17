@@ -3,161 +3,216 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from "@/components/date-range-filter"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { AddActivitySheet, ViewActivitySheet } from "@/components/atividades"
+import { SalesEvolutionChart } from "@/components/sales"
+import { LeadsEvolutionChart } from "@/components/leads/leads-evolution-chart"
+import { FunnelConversionChart } from "@/components/metrics/funnel-conversion-chart"
+import { PipelineBreakdownChart } from "@/components/metrics/pipeline-breakdown-chart"
+import { CustomerEvolutionChart } from "@/components/metrics/customer-evolution-chart"
+import { GrowthRateChart } from "@/components/metrics/growth-rate-chart"
+import { TemporalEvolutionChart } from "@/components/metrics/temporal-evolution-chart"
+import { LtvCacComparison } from "@/components/metrics/ltv-cac-comparison"
 import { useAuth } from "@/hooks/use-auth"
-import { Phone, Mail, Calendar, FileText } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useState, useEffect } from "react"
 
-// Mock activities data
-const mockActivities = [
-  {
-    id: "activity-1",
-    type: "call" as const,
-    title: "Follow-up call with Alice Johnson",
-    description: "Discussed project requirements and timeline",
-    contactId: "contact-1",
-    whitelabelId: "wl-1",
-    userId: "user-2",
-    createdAt: new Date("2024-01-25T10:30:00"),
-  },
-  {
-    id: "activity-2",
-    type: "email" as const,
-    title: "Sent proposal to Bob Smith",
-    description: "Enterprise software license proposal",
-    contactId: "contact-2",
-    dealId: "deal-2",
-    whitelabelId: "wl-1",
-    userId: "user-2",
-    createdAt: new Date("2024-01-24T14:15:00"),
-  },
-  {
-    id: "activity-3",
-    type: "meeting" as const,
-    title: "Demo session with Carol Davis",
-    description: "Product demonstration and Q&A",
-    contactId: "contact-3",
-    whitelabelId: "wl-2",
-    userId: "user-3",
-    createdAt: new Date("2024-01-23T16:00:00"),
-  },
-  {
-    id: "activity-4",
-    type: "note" as const,
-    title: "Contract negotiation notes",
-    description: "Key points discussed during contract review",
-    dealId: "deal-1",
-    whitelabelId: "wl-1",
-    userId: "user-2",
-    createdAt: new Date("2024-01-22T11:45:00"),
-  },
-]
-
-export default function ActivitiesPage() {
-  const { user } = useAuth()
-  const [selectedActivity, setSelectedActivity] = useState<typeof mockActivities[0] | null>(null)
-  const [isViewSheetOpen, setIsViewSheetOpen] = useState(false)
+export default function MetricsPage() {
+  const { user, whitelabel, isLoading: authLoading } = useAuth()
   const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
+  
+  // Sales Evolution state
+  const [salesEvolutionData, setSalesEvolutionData] = useState<any[]>([])
+  const [isSalesEvolutionLoading, setIsSalesEvolutionLoading] = useState(true)
 
-  const userActivities = useMemo(() => {
-    if (!user) return []
-    return mockActivities.filter((a) => a.whitelabelId === user.whitelabelId)
-  }, [user])
+  // Leads Evolution state
+  const [leadsEvolutionData, setLeadsEvolutionData] = useState<any[]>([])
+  const [isLeadsEvolutionLoading, setIsLeadsEvolutionLoading] = useState(true)
 
-  const handleActivityAdded = () => {
-    // TODO: Reload activities from Supabase
-  }
+  // Load Sales Evolution data - Now respects date filter
+  useEffect(() => {
+    const loadSalesEvolutionData = async () => {
+      if (authLoading || !user) return
 
-  const handleViewActivity = (activity: typeof mockActivities[0]) => {
-    setSelectedActivity(activity)
-    setIsViewSheetOpen(true)
-  }
+      setIsSalesEvolutionLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (dateRange.from) params.append('fromDate', dateRange.from.toISOString())
+        if (dateRange.to) params.append('toDate', dateRange.to.toISOString())
+        
+        const response = await fetch(`/api/dashboard/sales-evolution?${params}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "call":
-        return Phone
-      case "email":
-        return Mail
-      case "meeting":
-        return Calendar
-      case "note":
-        return FileText
-      default:
-        return FileText
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setSalesEvolutionData(data.data)
+          }
+        } else {
+          setSalesEvolutionData([])
+        }
+      } catch (error) {
+        setSalesEvolutionData([])
+        // Silently ignore errors
+      } finally {
+        setIsSalesEvolutionLoading(false)
+      }
     }
-  }
 
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case "call":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-      case "email":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-      case "meeting":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-      case "note":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+    loadSalesEvolutionData()
+  }, [user, authLoading, dateRange])
+
+  // Load Leads Evolution data - Now respects date filter
+  useEffect(() => {
+    const loadLeadsEvolutionData = async () => {
+      if (authLoading || !user) return
+
+      setIsLeadsEvolutionLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (dateRange.from) params.append('fromDate', dateRange.from.toISOString())
+        if (dateRange.to) params.append('toDate', dateRange.to.toISOString())
+        
+        const response = await fetch(`/api/dashboard/leads-evolution?${params}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setLeadsEvolutionData(data)
+        } else {
+          setLeadsEvolutionData([])
+        }
+      } catch (error) {
+        setLeadsEvolutionData([])
+        // Silently ignore errors
+      } finally {
+        setIsLeadsEvolutionLoading(false)
+      }
     }
+
+    loadLeadsEvolutionData()
+  }, [user, authLoading, dateRange])
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <DashboardHeader title="Métricas" description="Carregando..." />
+        <div className="flex-1 overflow-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Autenticando...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
-  if (!user) return null
+  if (!user || !whitelabel) return null
 
   return (
     <DashboardLayout>
       <DashboardHeader title="Métricas" description="Acompanhe as métricas de desempenho do negócio.">
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        <AddActivitySheet onActivityAdded={handleActivityAdded} />
       </DashboardHeader>
 
       <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-4">
-          {userActivities.map((activity) => {
-            const Icon = getActivityIcon(activity.type)
-            return (
-              <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{activity.title}</CardTitle>
-                        {activity.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Badge className={getActivityColor(activity.type)}>{activity.type}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      {activity.createdAt.toLocaleDateString("pt-BR")} às {activity.createdAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                    <Button variant="outline" size="sm" onClick={() => handleViewActivity(activity)}>
-                      Ver Detalhes
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+        <div className="space-y-8">
+          {/* Evolução Section */}
+          <section className="space-y-4">
+            <div className="border-b pb-2">
+              <h2 className="text-2xl font-bold tracking-tight">Evolução</h2>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe o crescimento de vendas, leads e clientes ao longo do tempo
+              </p>
+            </div>
+            <div className="space-y-6">
+              <SalesEvolutionChart
+                data={salesEvolutionData}
+                brandColor={whitelabel.brandColor}
+                isLoading={isSalesEvolutionLoading}
+              />
+              <LeadsEvolutionChart
+                data={leadsEvolutionData}
+                brandColor={whitelabel.brandColor}
+                isLoading={isLeadsEvolutionLoading}
+              />
+              <CustomerEvolutionChart 
+                months={12} 
+                brandColor={whitelabel.brandColor}
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+              />
+            </div>
+          </section>
+
+          {/* Funil & Pipelines Section */}
+          <section className="space-y-4">
+            <div className="border-b pb-2">
+              <h2 className="text-2xl font-bold tracking-tight">Funil & Pipelines</h2>
+              <p className="text-sm text-muted-foreground">
+                Análise de conversão por etapas e distribuição por pipeline
+              </p>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <FunnelConversionChart 
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+                brandColor={whitelabel.brandColor}
+              />
+              <PipelineBreakdownChart 
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+                brandColor={whitelabel.brandColor}
+              />
+            </div>
+          </section>
+
+          {/* Crescimento Section */}
+          <section className="space-y-4">
+            <div className="border-b pb-2">
+              <h2 className="text-2xl font-bold tracking-tight">Crescimento</h2>
+              <p className="text-sm text-muted-foreground">
+                Taxa de crescimento e evolução temporal da receita
+              </p>
+            </div>
+            <div className="space-y-6">
+              <GrowthRateChart 
+                months={12} 
+                brandColor={whitelabel.brandColor}
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+              />
+              <TemporalEvolutionChart 
+                months={12} 
+                brandColor={whitelabel.brandColor}
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+              />
+            </div>
+          </section>
+
+          {/* LTV & CAC Section */}
+          <section className="space-y-4">
+            <div className="border-b pb-2">
+              <h2 className="text-2xl font-bold tracking-tight">LTV & CAC</h2>
+              <p className="text-sm text-muted-foreground">
+                Lifetime Value vs Customer Acquisition Cost e análise de rentabilidade
+              </p>
+            </div>
+            <div className="grid gap-6">
+              <LtvCacComparison 
+                brandColor={whitelabel.brandColor}
+                fromDate={dateRange.from?.toISOString()}
+                toDate={dateRange.to?.toISOString()}
+              />
+            </div>
+          </section>
         </div>
       </div>
-
-      <ViewActivitySheet
-        activity={selectedActivity}
-        open={isViewSheetOpen}
-        onOpenChange={setIsViewSheetOpen}
-      />
     </DashboardLayout>
   )
 }

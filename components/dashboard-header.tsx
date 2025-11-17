@@ -19,20 +19,20 @@ export function DashboardHeader({ title, description, children }: DashboardHeade
   const { user } = useAuth()
 
   return (
-    <div className="rounded-t-xl border-b border-border bg-background">
-      <div className="mb-4 mt-4 flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="h-4" />
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-            {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <div className="w-full flex-shrink-0 rounded-t-xl border-b border-border bg-background">
+      <div className="mt-4 flex h-16 items-center justify-between px-6">
+        <div className="flex items-center gap-2 min-w-0">
+          <SidebarTrigger className="-ml-1 flex-shrink-0" />
+          <Separator orientation="vertical" className="h-4 flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold text-foreground truncate">{title}</h1>
+            {description && <p className="text-sm text-muted-foreground truncate">{description}</p>}
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-shrink-0">
           {children}
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" className="flex-shrink-0">
             <Bell className="h-4 w-4" />
           </Button>
         </div>

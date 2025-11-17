@@ -14,6 +14,7 @@ interface CommissionOverviewCardProps {
   settings: CommissionSettings | null
   deals: Deal[]
   brandColor?: string
+  businessModel?: "TCV" | "MRR"
 }
 
 export function CommissionOverviewCard({ 
@@ -22,7 +23,8 @@ export function CommissionOverviewCard({
   periodYear,
   settings,
   deals,
-  brandColor = '#3b82f6'
+  brandColor = '#3b82f6',
+  businessModel = 'TCV'
 }: CommissionOverviewCardProps) {
   const periodLabel = new Date(periodYear, periodMonth - 1).toLocaleDateString('pt-BR', { 
     month: 'long', 
@@ -46,6 +48,7 @@ export function CommissionOverviewCard({
             <p className="text-2xl font-bold">{formatCurrency(overview.totalCommissions)}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {overview.totalDeals} deals • {formatCurrency(overview.totalSales)} em vendas
+              {businessModel === 'MRR' && <span className="ml-1 text-purple-600 dark:text-purple-400 font-medium">(MRR)</span>}
             </p>
             <p className="text-xs text-muted-foreground">{periodLabel}</p>
           </CardContent>

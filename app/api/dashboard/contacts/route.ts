@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get the user's whitelabel information
+    // Get the user's whitelabel information (optimized - specific fields)
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("*, whitelabel_id")
+      .select("whitelabel_id, id, email")
       .eq("email", authUser.email)
       .single()
 
@@ -24,10 +24,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Get contacts for this whitelabel
+    // OPTIMIZED: Specific field selection instead of SELECT *
     const { data: contacts, error: contactsError } = await supabase
       .from("contacts")
-      .select("*")
+      .select(`
+        id,
+        name,
+        email,
+        phone,
+        company,
+        funnel_stage,
+        pipeline_id,
+        stage_id,
+        lead_source,
+        whitelabel_id,
+        deal_value,
+        deal_duration,
+        sdr_id,
+        closer_id,
+        meeting_date,
+        sale_date,
+        notes,
+        created_at,
+        updated_at
+      `)
       .eq("whitelabel_id", user.whitelabel_id)
       .order("created_at", { ascending: false })
 

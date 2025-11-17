@@ -1,5 +1,5 @@
 // Secure data service using backend API routes
-import { Deal, Contact, Team, CommissionSettings, UserCommission, Meeting } from "./types"
+import { Deal, Contact, Team, CommissionSettings, UserCommission, Meeting, Employee } from "./types"
 import { fetchWithCache, apiCache } from "./api-cache"
 
 interface Analytics {
@@ -61,6 +61,14 @@ class SecureDataService {
     return fetchWithCache(
       'teams',
       () => this.request<Team[]>("/teams"),
+      { ttl: 2 * 60 * 1000 } // 2 minutes cache
+    )
+  }
+
+  async getEmployees(): Promise<Employee[]> {
+    return fetchWithCache(
+      'employees',
+      () => this.request<Employee[]>("/employees"),
       { ttl: 2 * 60 * 1000 } // 2 minutes cache
     )
   }
@@ -214,12 +222,14 @@ class SecureDataService {
 
   async getMeetings(params?: { 
     sdrId?: string
+    closerId?: string
     month?: number
     year?: number
     status?: string 
   }): Promise<Meeting[]> {
     const queryParams = new URLSearchParams()
     if (params?.sdrId) queryParams.append('sdrId', params.sdrId)
+    if (params?.closerId) queryParams.append('closerId', params.closerId)
     if (params?.month) queryParams.append('month', params.month.toString())
     if (params?.year) queryParams.append('year', params.year.toString())
     if (params?.status) queryParams.append('status', params.status)

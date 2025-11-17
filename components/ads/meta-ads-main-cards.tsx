@@ -55,17 +55,19 @@ export function MetaAdsMainCards({ metrics, isLoading = false, brandColor = "#63
     },
     {
       title: "CPL (Custo por Lead)",
-      value: `R$ ${metrics.cac.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: metrics.totalLeads > 0
+        ? `R$ ${(metrics.totalSpend / metrics.totalLeads).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : "R$ 0,00",
       description: `Total investido / ${metrics.totalLeads} leads`,
       icon: Users,
       color: brandColor,
     },
     {
       title: "CAC (Custo por Aquisição)",
-      value: metrics.totalPurchases > 0
-        ? `R$ ${(metrics.totalSpend / metrics.totalPurchases).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      value: metrics.totalSales > 0
+        ? `R$ ${metrics.cac.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : "R$ 0,00",
-      description: `Total investido / ${metrics.totalPurchases} leads fechados`,
+      description: `Total investido / ${metrics.totalSales} vendas`,
       icon: Target,
       color: brandColor,
     },

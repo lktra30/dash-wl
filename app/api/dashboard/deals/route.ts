@@ -41,12 +41,14 @@ export async function GET(request: NextRequest) {
       title: deal.title,
       value: parseFloat(deal.value),
       status: deal.status,
+      duration: deal.duration,
       contactId: deal.contact_id,
       whitelabelId: deal.whitelabel_id,
       assignedTo: deal.assigned_to,
       sdrId: deal.sdr_id,
       closerId: deal.closer_id,
       expectedCloseDate: deal.expected_close_date,
+      saleDate: deal.sale_date,
       createdAt: deal.created_at,
       updatedAt: deal.updated_at
     }))

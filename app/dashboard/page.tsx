@@ -3,12 +3,9 @@
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
 // import { StatsCard } from "@/components/stats-card"
-import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from "@/components/date-range-filter"
 import { MainMetricsCards, calculateMainPageMetrics, TeamCompetition } from "@/components/mainPage"
 import { MeetingsGoalProgress, SalesGoalProgress } from "@/components/goals"
-import { MetaAdsMainCards, MetaAdsMonthlyChart } from "@/components/ads"
-import { SalesEvolutionChart } from "@/components/sales"
-import { LeadsEvolutionChart } from "@/components/leads/leads-evolution-chart"
+import { MetaAdsMainCards, MetaAdsDailyChart } from "@/components/ads"
 import { PipelineComparisonCard } from "@/components/pipelines/pipeline-comparison-card"
 import { SDRRanking } from "@/components/mainPage/sdr-ranking"
 import { CloserRanking } from "@/components/mainPage/closer-ranking"
@@ -20,6 +17,20 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import type { MetaAdsMetrics, MetaAdsTimeSeriesData } from "@/lib/types"
 
+type DateRangeFilterValue = { from: Date; to: Date }
+
+// Função para obter o intervalo do mês atual
+function getCurrentMonthRange(): DateRangeFilterValue {
+  const now = new Date()
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+  
+  return {
+    from: firstDay,
+    to: lastDay
+  }
+}
+
 export default function DashboardPage() {
   const { user, whitelabel, isLoading: authLoading } = useAuth()
   const [stats, setStats] = useState<any>(null)
@@ -29,20 +40,12 @@ export default function DashboardPage() {
   const [topTeams, setTopTeams] = useState<any[]>([])
   const [competition, setCompetition] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
+  const [dateRange] = useState<DateRangeFilterValue>(getCurrentMonthRange())
   
   // Meta Ads state
   const [metaAdsMetrics, setMetaAdsMetrics] = useState<MetaAdsMetrics | null>(null)
   const [metaAdsTimeSeries, setMetaAdsTimeSeries] = useState<MetaAdsTimeSeriesData[]>([])
   const [isMetaAdsLoading, setIsMetaAdsLoading] = useState(true)
-
-  // Sales Evolution state
-  const [salesEvolutionData, setSalesEvolutionData] = useState<any[]>([])
-  const [isSalesEvolutionLoading, setIsSalesEvolutionLoading] = useState(true)
-
-  // Leads Evolution state
-  const [leadsEvolutionData, setLeadsEvolutionData] = useState<any[]>([])
-  const [isLeadsEvolutionLoading, setIsLeadsEvolutionLoading] = useState(true)
 
   // Pipeline Metrics state
   const [pipelineMetrics, setPipelineMetrics] = useState<any[]>([])
@@ -107,7 +110,7 @@ export default function DashboardPage() {
     loadDashboardData()
   }, [user, authLoading, whitelabel, dateRange])
 
-  // Load Meta Ads data - Cards filtered by dateRange, Chart shows 1 year
+  // Load Meta Ads data - Cards and Chart both filtered by dateRange (current month)
   useEffect(() => {
     const loadMetaAdsData = async () => {
       if (authLoading || !user) return
@@ -128,8 +131,14 @@ export default function DashboardPage() {
           },
         })
 
-        // Fetch chart data (last 1 year, independent of filter)
-        const chartResponse = await fetch("/api/dashboard/ads?type=chart", {
+        // Fetch chart data (also filtered by current month)
+        const chartParams = new URLSearchParams({
+          type: "chart",
+          from: dateRange.from.toISOString().split('T')[0],
+          to: dateRange.to.toISOString().split('T')[0]
+        })
+        
+        const chartResponse = await fetch(`/api/dashboard/ads?${chartParams}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -161,70 +170,6 @@ export default function DashboardPage() {
 
     loadMetaAdsData()
   }, [user, authLoading, dateRange])
-
-  // Load Sales Evolution data - Independent of date filter (last 12 months)
-  useEffect(() => {
-    const loadSalesEvolutionData = async () => {
-      if (authLoading || !user) return
-
-      setIsSalesEvolutionLoading(true)
-      try {
-        const response = await fetch("/api/dashboard/sales-evolution", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success) {
-            setSalesEvolutionData(data.data)
-          }
-        } else {
-          setSalesEvolutionData([])
-        }
-      } catch (error) {
-        setSalesEvolutionData([])
-        // Silently ignore errors
-      } finally {
-        setIsSalesEvolutionLoading(false)
-      }
-    }
-
-    loadSalesEvolutionData()
-  }, [user, authLoading])
-
-  // Load Leads Evolution data - Independent of date filter (last 12 months)
-  useEffect(() => {
-    const loadLeadsEvolutionData = async () => {
-      if (authLoading || !user) return
-
-      setIsLeadsEvolutionLoading(true)
-      try {
-        const response = await fetch("/api/dashboard/leads-evolution", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          setLeadsEvolutionData(data)
-        } else {
-          setLeadsEvolutionData([])
-        }
-      } catch (error) {
-        setLeadsEvolutionData([])
-        // Silently ignore errors
-      } finally {
-        setIsLeadsEvolutionLoading(false)
-      }
-    }
-
-    loadLeadsEvolutionData()
-  }, [user, authLoading])
 
   // Load Pipeline Metrics data
   useEffect(() => {
@@ -294,9 +239,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <DashboardHeader title="Dashboard" description={`Bem-vindo, ${user.name}`}>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
-      </DashboardHeader>
+      <DashboardHeader title="Dashboard" description={`Bem-vindo, ${user.name}`} />
 
       <div className="flex-1 overflow-auto p-6 space-y-6 ">
 
@@ -329,24 +272,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Sales Evolution Section */}
-          <div className="space-y-4">
-            <SalesEvolutionChart
-              data={salesEvolutionData}
-              brandColor={whitelabel.brandColor}
-              isLoading={isSalesEvolutionLoading}
-            />
-          </div>
-
-          {/* Leads Evolution Section */}
-          <div className="space-y-4">
-            <LeadsEvolutionChart
-              data={leadsEvolutionData}
-              brandColor={whitelabel.brandColor}
-              isLoading={isLeadsEvolutionLoading}
-            />
-          </div>
-
           {/* Meta Ads Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -371,7 +296,7 @@ export default function DashboardPage() {
               roas={mainMetrics?.roas.value}
             />
             
-            <MetaAdsMonthlyChart 
+            <MetaAdsDailyChart 
               data={metaAdsTimeSeries} 
               brandColor={whitelabel.brandColor}
               isLoading={isMetaAdsLoading}

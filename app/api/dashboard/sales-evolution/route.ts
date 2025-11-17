@@ -4,6 +4,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 export async function GET(request: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient()
+    const { searchParams } = new URL(request.url)
+    
+    // Get optional date filters from query params
+    const fromDate = searchParams.get('fromDate')
+    const toDate = searchParams.get('toDate')
 
     // Get the authenticated user
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -23,18 +28,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Calculate date range for last 12 months
-    const endDate = new Date()
-    const startDate = new Date()
-    startDate.setMonth(startDate.getMonth() - 12)
+    // Determine date range: use provided dates or default to last 12 months
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (fromDate && toDate) {
+      startDate = new Date(fromDate);
+      endDate = new Date(toDate);
+    } else {
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 12);
+    }
 
-    // Get all deals with status "won" for the last 12 months
+    // Get all deals with status "won" for the date range
     const { data: deals, error: dealsError } = await supabase
       .from("deals")
       .select("id, value, status, created_at")
       .eq("whitelabel_id", user.whitelabel_id)
       .eq("status", "won")
       .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString())
       .order("created_at", { ascending: true })
 
     if (dealsError) {
@@ -43,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Group deals by month
-    const monthlyData = groupDealsByMonth(deals || [])
+    const monthlyData = groupDealsByMonth(deals || [], startDate, endDate)
 
     return NextResponse.json({
       success: true,
@@ -62,7 +76,7 @@ interface Deal {
   created_at: string
 }
 
-function groupDealsByMonth(deals: Deal[]): {
+function groupDealsByMonth(deals: Deal[], startDate: Date, endDate: Date): {
   date: string
   revenue: number
   count: number
@@ -81,10 +95,6 @@ function groupDealsByMonth(deals: Deal[]): {
   })
 
   // Fill in missing months with zero values
-  const endDate = new Date()
-  const startDate = new Date()
-  startDate.setMonth(startDate.getMonth() - 12)
-
   const allMonths: { date: string; revenue: number; count: number }[] = []
   const current = new Date(startDate)
 

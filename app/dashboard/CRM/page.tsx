@@ -83,30 +83,32 @@ export default function ContactsPage() {
         />
       </DashboardHeader>
 
-      <div className="flex-1 flex flex-col p-6">
+      <div className="flex-1 flex flex-col min-h-0 px-6 pt-6 pb-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Carregando contatos...</p>
           </div>
         ) : (
-          <Tabs defaultValue="table" className="flex-1 flex flex-col space-y-6">
-            <TabsList className="space-x-2">
+          <Tabs defaultValue="table" className="flex-1 flex flex-col min-h-0 gap-0">
+            <TabsList className="flex-shrink-0 mb-4">
               <TabsTrigger value="table">Tabela</TabsTrigger>
               <TabsTrigger value="kanban">Kanban</TabsTrigger>
               <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
               {/* <TabsTrigger value="deals">Vendas</TabsTrigger> */}
             </TabsList>
 
-            <TabsContent value="table" className="space-y-4">
-              <ContactsTable
-                contacts={contacts}
-                onContactUpdated={loadContacts}
-                onContactDeleted={optimisticDelete}
-                dataService={dataService}
-              />
+            <TabsContent value="table" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <div className="flex-1 overflow-auto min-h-0">
+                <ContactsTable
+                  contacts={contacts}
+                  onContactUpdated={loadContacts}
+                  onContactDeleted={optimisticDelete}
+                  dataService={dataService}
+                />
+              </div>
             </TabsContent>
 
-            <TabsContent value="kanban" className="flex-1 flex flex-col space-y-4">
+            <TabsContent value="kanban" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
               <ContactsKanban
                 contacts={contacts}
                 onUpdateContact={handleUpdateContact}
@@ -115,12 +117,16 @@ export default function ContactsPage() {
               />
             </TabsContent>
 
-            <TabsContent value="pipelines" className="space-y-4">
-              <PipelinesConfig />
+            <TabsContent value="pipelines" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <div className="flex-1 overflow-auto min-h-0">
+                <PipelinesConfig />
+              </div>
             </TabsContent>
 
-            <TabsContent value="deals" className="space-y-4">
-              <DealsGrid deals={deals} isLoading={dealsLoading} />
+            <TabsContent value="deals" className="flex-1 min-h-0 mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <div className="flex-1 overflow-auto min-h-0">
+                <DealsGrid deals={deals} isLoading={dealsLoading} />
+              </div>
             </TabsContent>
           </Tabs>
         )}

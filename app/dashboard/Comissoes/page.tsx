@@ -25,15 +25,19 @@ import {
   Deal,
   SDRMetrics,
   CloserMetrics,
-  CommissionOverview
+  CommissionOverview,
+  Employee,
+  Contact
 } from "@/lib/types"
 import { 
   CommissionSettingsCard, 
   CommissionOverviewCard, 
   UserCommissionCard,
-  CommissionGuideCard
+  CommissionGuideCard,
+  IndividualCommissionCards
 } from "@/components/comissoes"
 import { calculateTotalCommissionsCard } from "@/lib/commissions"
+import { getSDRMetricsForPeriod, getCloserMetricsWithContacts } from "@/lib/commission-calculations"
 
 export default function CommissionsPage() {
   const { user, whitelabel } = useAuth()
@@ -42,6 +46,8 @@ export default function CommissionsPage() {
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
   
@@ -60,15 +66,19 @@ export default function CommissionsPage() {
 
       setIsLoading(true)
       try {
-        const [settingsData, meetingsData, dealsData] = await Promise.all([
+        const [settingsData, meetingsData, dealsData, contactsData, employeesData] = await Promise.all([
           dataService.getCommissionSettings(),
           dataService.getMeetings({ month: currentMonth, year: currentYear }),
           dataService.getDeals(),
+          dataService.getContacts(),
+          dataService.getEmployees(),
         ])
         
         setSettings(settingsData)
         setMeetings(meetingsData)
         setDeals(dealsData)
+        setContacts(contactsData)
+        setEmployees(employeesData)
       } catch (error) {
         // TODO: surface commission loading errors to the user interface
       } finally {
@@ -94,16 +104,59 @@ export default function CommissionsPage() {
   const userMetrics = useMemo(() => {
     if (!settings) return { sdrMetrics: [], closerMetrics: [] }
 
-    // This is simplified - in a real app, you'd fetch a list of users
-    // and calculate metrics for each one
-    const sdrMetrics: SDRMetrics[] = []
-    const closerMetrics: CloserMetrics[] = []
+    // Filter employees by role - check if role contains SDR or Closer
+    // Note: Some employees may have "SDR/Closer" role, they will appear in both lists
+    const sdrs = employees.filter(emp => {
+      const roleUpper = emp.role?.toUpperCase() || ''
+      return roleUpper.includes('SDR')
+    })
+    
+    const closers = employees.filter(emp => {
+      const roleUpper = emp.role?.toUpperCase() || ''
+      return roleUpper.includes('CLOSER')
+    })
 
-    // For now, return empty arrays
-    // In a production app, you'd iterate through users and calculate their metrics
+    // Calculate SDR metrics
+    const sdrMetrics: SDRMetrics[] = sdrs.map(sdr => 
+      getSDRMetricsForPeriod(
+        meetings,
+        settings,
+        sdr.id,
+        sdr.name,
+        currentMonth,
+        currentYear
+      )
+    ) // Show all SDRs, even without activity
+
+    // Calculate Closer metrics
+    const closerMetrics: CloserMetrics[] = closers.map(closer => 
+      getCloserMetricsWithContacts(
+        deals,
+        contacts,
+        settings,
+        closer.id,
+        closer.name,
+        currentMonth,
+        currentYear,
+        whitelabel?.businessModel || "TCV"
+      )
+    ) // Show all Closers, even without sales
     
     return { sdrMetrics, closerMetrics }
-  }, [settings, meetings, deals])
+  }, [settings, meetings, deals, contacts, employees, currentMonth, currentYear, whitelabel?.businessModel])
+
+  // Filter deals by current period (month/year)
+  const filteredDeals = useMemo(() => {
+    return deals.filter(deal => {
+      if (!deal.saleDate) return false
+      
+      const saleDate = new Date(deal.saleDate)
+      const dealMonth = saleDate.getMonth() + 1
+      const dealYear = saleDate.getFullYear()
+      
+      return dealMonth === currentMonth && dealYear === currentYear
+    })
+  }, [deals, currentMonth, currentYear])
 
   // Calculate overview
   const overview: CommissionOverview = useMemo(() => {
@@ -121,11 +174,12 @@ export default function CommissionsPage() {
       }
     }
 
-    // Usar a nova função de cálculo baseada em deals ganhos
+    // Usar a nova função de cálculo baseada em deals ganhos do período
     const cardData = calculateTotalCommissionsCard(
-      deals, 
+      filteredDeals, 
       settings, 
-      whitelabel?.businessModel || "TCV"
+      whitelabel?.businessModel || "TCV",
+      contacts // Pass contacts to calculate closer commissions correctly
     )
     
     const { sdrMetrics, closerMetrics } = userMetrics
@@ -153,7 +207,7 @@ export default function CommissionsPage() {
     }
     
     return finalOverview
-  }, [deals, settings, userMetrics])
+  }, [filteredDeals, contacts, settings, userMetrics, whitelabel?.businessModel])
 
   if (!user) return null
 
@@ -200,9 +254,25 @@ export default function CommissionsPage() {
               periodMonth={currentMonth}
               periodYear={currentYear}
               settings={settings}
-              deals={deals}
+              deals={filteredDeals}
               brandColor={brandColor}
+              businessModel={whitelabel?.businessModel || "TCV"}
             />
+            
+            {/* Individual Commission Cards */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold mb-1">Desempenho Individual</h2>
+                <p className="text-sm text-muted-foreground">
+                  Acompanhe o progresso de cada SDR e Closer em relação às metas estabelecidas
+                </p>
+              </div>
+              <IndividualCommissionCards 
+                sdrMetrics={userMetrics.sdrMetrics}
+                closerMetrics={userMetrics.closerMetrics}
+                businessModel={whitelabel?.businessModel || "TCV"}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="settings">

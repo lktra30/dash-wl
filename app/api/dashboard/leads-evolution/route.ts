@@ -4,6 +4,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 export async function GET(request: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient()
+    const { searchParams } = new URL(request.url)
+    
+    // Get optional date filters from query params
+    const fromDate = searchParams.get('fromDate')
+    const toDate = searchParams.get('toDate')
 
     // Get the authenticated user
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -23,11 +28,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Calculate date 12 months ago
-    const now = new Date()
-    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    // Determine date range: use provided dates or default to last 12 months
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (fromDate && toDate) {
+      startDate = new Date(fromDate);
+      endDate = new Date(toDate);
+    } else {
+      endDate = new Date();
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    }
 
-    // Fetch all contacts from the last 12 months with their stage information
+    // Fetch all contacts from the date range with their stage information
     const { data: contacts, error: contactsError } = await supabase
       .from("contacts")
       .select(`
@@ -43,7 +57,8 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq("whitelabel_id", user.whitelabel_id)
-      .gte("created_at", twelveMonthsAgo.toISOString())
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString())
       .order("created_at", { ascending: true })
 
     if (contactsError) {
@@ -86,9 +101,9 @@ export async function GET(request: NextRequest) {
 
     // Fill in missing months with zeros and sort
     const result: { date: string; meetings: number; sales: number }[] = []
-    const currentDate = new Date(twelveMonthsAgo)
+    const currentDate = new Date(startDate)
 
-    while (currentDate <= now) {
+    while (currentDate <= endDate) {
       const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
 
       result.push({

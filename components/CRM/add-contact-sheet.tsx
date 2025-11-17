@@ -59,6 +59,9 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
     sdrId: "",
     closerId: "",
     meetingDate: "",
+    saleDate: "",
+    dealValue: 0,
+    dealDuration: 0,
     notes: "",
   })
 
@@ -82,6 +85,9 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         sdrId: "",
         closerId: "",
         meetingDate: "",
+        saleDate: "",
+        dealValue: 0,
+        dealDuration: 0,
         notes: "",
       })
       setSelectedPipeline(null)
@@ -159,6 +165,38 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         setError(`O estágio "${currentStage.name}" requer que um Closer seja selecionado.`)
         return
       }
+
+      // Validar campos obrigatórios quando o estágio representa venda
+      if (currentStage.countsAsSale || currentStage.requiresDealValue) {
+        if (!formData.dealValue || formData.dealValue <= 0) {
+          setError(`O estágio "${currentStage.name}" requer que um valor de venda seja preenchido.`)
+          return
+        }
+        
+        // Se é venda, SEMPRE teve reunião antes
+        if (currentStage.countsAsSale) {
+          if (!formData.meetingDate) {
+            setError(`O estágio "${currentStage.name}" requer que uma data de reunião seja preenchida (toda venda teve uma reunião antes).`)
+            return
+          }
+          
+          if (!formData.saleDate) {
+            setError(`O estágio "${currentStage.name}" requer que uma data de venda seja preenchida.`)
+            return
+          }
+
+          // Validar que a reunião foi antes da venda
+          if (formData.meetingDate && formData.saleDate) {
+            const meetingDateTime = new Date(formData.meetingDate).getTime()
+            const saleDateTime = new Date(formData.saleDate).getTime()
+            
+            if (meetingDateTime >= saleDateTime) {
+              setError("A data da reunião deve ser anterior à data da venda.")
+              return
+            }
+          }
+        }
+      }
     }
 
     if (!dataService) return
@@ -177,6 +215,11 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         leadSource: formData.leadSource || undefined,
         sdrId: formData.sdrId || undefined,
         closerId: formData.closerId || undefined,
+        meetingDate: formData.meetingDate || undefined,
+        saleDate: formData.saleDate || undefined,
+        dealValue: (currentStage?.countsAsSale || currentStage?.requiresDealValue) ? formData.dealValue : undefined,
+        dealDuration: currentStage?.countsAsSale ? formData.dealDuration : undefined,
+        notes: formData.notes || undefined,
       })
 
       // Reset form
@@ -191,6 +234,11 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
         leadSource: "",
         sdrId: "",
         closerId: "",
+        meetingDate: "",
+        saleDate: "",
+        dealValue: 0,
+        dealDuration: 0,
+        notes: "",
       })
       setSelectedPipeline(null)
 
@@ -228,7 +276,7 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
           Adicionar Contato
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md">
+      <SheetContent className="w-[40vw] min-w-[500px] max-w-[800px]">
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Adicionar Novo Contato</SheetTitle>
           <SheetDescription>
@@ -386,10 +434,13 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
             </div>
 
             {/* Campo de Data de Reunião - condicional */}
-            {selectedStage?.countsAsMeeting && (
+            {(selectedStage?.countsAsMeeting || selectedStage?.countsAsSale) && (
               <div className="space-y-3">
                 <Label htmlFor="meetingDate" className="text-sm font-semibold">
                   Data da Reunião <span className="text-destructive">*</span>
+                  {selectedStage?.countsAsSale && (
+                    <span className="text-xs text-muted-foreground ml-2">(Toda venda teve uma reunião antes)</span>
+                  )}
                 </Label>
                 <Input
                   id="meetingDate"
@@ -400,6 +451,61 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
                   required
                 />
               </div>
+            )}
+
+            {/* Campos de Venda - condicional quando estágio representa venda */}
+            {(selectedStage?.countsAsSale || selectedStage?.requiresDealValue) && (
+              <>
+                {selectedStage?.countsAsSale && (
+                  <div className="space-y-3">
+                    <Label htmlFor="saleDate" className="text-sm font-semibold">
+                      Data da Venda <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="saleDate"
+                      type="datetime-local"
+                      value={formData.saleDate}
+                      onChange={(e) => handleInputChange("saleDate", e.target.value)}
+                      className="h-11 text-base"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <Label htmlFor="dealValue" className="text-sm font-semibold">
+                    Valor da Venda {(selectedStage?.countsAsSale || selectedStage?.requiresDealValue) && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Input
+                    id="dealValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.dealValue}
+                    onChange={(e) => handleInputChange("dealValue", e.target.value)}
+                    placeholder="0.00"
+                    className="h-11 text-base"
+                    required={selectedStage?.countsAsSale || selectedStage?.requiresDealValue}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="dealDuration" className="text-sm font-semibold">
+                    Duração (em meses) {selectedStage?.countsAsSale && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Input
+                    id="dealDuration"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.dealDuration}
+                    onChange={(e) => handleInputChange("dealDuration", e.target.value)}
+                    placeholder="0"
+                    className="h-11 text-base"
+                    required={selectedStage?.countsAsSale}
+                  />
+                </div>
+              </>
             )}
 
             {/* Campo de Observações */}

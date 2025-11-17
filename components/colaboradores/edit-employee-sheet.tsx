@@ -81,16 +81,16 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[540px] overflow-y-auto space-y-6 px-4 py-4">
-        <form onSubmit={handleSubmit}>
-          <SheetHeader>
-            <SheetTitle>Editar Colaborador</SheetTitle>
-            <SheetDescription>
-              Atualize as informações do colaborador. Campos marcados com * são obrigatórios.
-            </SheetDescription>
-          </SheetHeader>
+      <SheetContent className="w-[40vw] min-w-[500px] max-w-[800px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Editar Colaborador</SheetTitle>
+          <SheetDescription>
+            Atualize as informações do colaborador. Campos marcados com * são obrigatórios.
+          </SheetDescription>
+        </SheetHeader>
 
-          <div className="space-y-4 py-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 py-4">
+          <div className="overflow-y-auto space-y-6 px-4 max-h-[calc(100vh-16rem)]">
             {/* Name */}
             <div className="space-y-2">
               <Label htmlFor="edit-name">
@@ -264,7 +264,7 @@ export function EditEmployeeSheet({ open, onOpenChange, employee, onSave }: Edit
             </div>
           </div>
 
-          <SheetFooter className="gap-2">
+          <SheetFooter className="gap-2 px-4">
             <Button
               type="button"
               variant="outline"

@@ -170,7 +170,7 @@ BEGIN
 
     RETURN v_pipeline_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Função para migrar contacts existentes para o novo sistema
 CREATE OR REPLACE FUNCTION migrate_contacts_to_pipelines()

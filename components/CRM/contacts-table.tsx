@@ -34,26 +34,12 @@ import {
 import { Mail, Phone, Building, Pencil, Trash2, Search, ArrowUpDown, Settings2 } from "lucide-react"
 import { EditContactSheet } from "./edit-contact-sheet"
 import { useTheme } from "@/hooks/use-theme"
-import type { Contact } from "@/lib/types"
+import type { Contact, PipelineStage, PipelineWithStages } from "@/lib/types"
 
 interface Employee {
   id: string
   name: string
   role: string
-}
-
-interface PipelineStage {
-  id: string
-  name: string
-  color: string
-  order: number
-}
-
-interface PipelineWithStages {
-  id: string
-  name: string
-  isDefault: boolean
-  stages: PipelineStage[]
 }
 
 interface ContactsTableProps {
@@ -63,7 +49,7 @@ interface ContactsTableProps {
   dataService: any
 }
 
-type ColumnKey = "name" | "company" | "contact" | "sdrCloser" | "status" | "leadSource" | "value" | "createdAt"
+type ColumnKey = "name" | "company" | "contact" | "sdrCloser" | "status" | "leadSource" | "value" | "updatedAt" | "createdAt"
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -130,8 +116,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
     "sdrCloser",
     "status",
     "leadSource",
-    "value",
-    "createdAt"
+    "updatedAt"
   ])
 
   // Load employees and pipelines for filters
@@ -189,6 +174,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
     status: "Status",
     leadSource: "Origem",
     value: "Valor",
+    updatedAt: "Última Atualização",
     createdAt: "Data Criação"
   }
 
@@ -219,7 +205,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch =
       contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
       contact.company?.toLowerCase().includes(searchTerm.toLowerCase())
 
     // Filter by stageId (new) or status (legacy)
@@ -288,7 +274,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
               <SelectContent>
                 <SelectItem value="all">Todos os Status</SelectItem>
                 {allStages
-                  .sort((a, b) => a.order - b.order)
+                  .sort((a, b) => a.orderPosition - b.orderPosition)
                   .map(stage => (
                     <SelectItem key={stage.id} value={stage.id}>
                       {stage.name}
@@ -334,7 +320,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
             {/* Column Selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="cursor-pointer">
+                <Button variant="outline" size="icon">
                   <Settings2 className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -388,6 +374,7 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                     {visibleColumns.includes("status") && <TableHead>Status</TableHead>}
                     {visibleColumns.includes("leadSource") && <TableHead>Origem</TableHead>}
                     {visibleColumns.includes("value") && <TableHead>Valor</TableHead>}
+                    {visibleColumns.includes("updatedAt") && <TableHead>Última Atualização</TableHead>}
                     {visibleColumns.includes("createdAt") && (
                       <TableHead>
                         <Button
@@ -522,26 +509,41 @@ export function ContactsTable({ contacts, onContactUpdated, onContactDeleted, da
                         )}
                         {visibleColumns.includes("value") && (
                           <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-medium">
-                                {contact.dealValue 
-                                  ? new Intl.NumberFormat('pt-BR', { 
-                                      style: 'currency', 
-                                      currency: 'BRL' 
-                                    }).format(contact.dealValue)
-                                  : '-'
-                                }
-                              </span>
-                              {contact.updatedAt && (
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(contact.updatedAt).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: '2-digit'
-                                  })}
-                                </span>
-                              )}
-                            </div>
+                            {(() => {
+                              // Find the current stage for this contact
+                              const currentStage = allStages.find(s => s.id === (contact as any).stageId)
+                              
+                              // Only show value if stage counts as sale AND value exists
+                              const shouldShowValue = currentStage?.countsAsSale === true && contact.dealValue
+                              
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="font-medium">
+                                    {shouldShowValue
+                                      ? new Intl.NumberFormat('pt-BR', { 
+                                          style: 'currency', 
+                                          currency: 'BRL' 
+                                        }).format(contact.dealValue!)
+                                      : '-'
+                                    }
+                                  </span>
+                                  {shouldShowValue && contact.updatedAt && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(contact.updatedAt).toLocaleDateString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: '2-digit'
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes("updatedAt") && (
+                          <TableCell className="text-muted-foreground">
+                            {contact.updatedAt ? formatDate(contact.updatedAt) : '-'}
                           </TableCell>
                         )}
                         {visibleColumns.includes("createdAt") && (

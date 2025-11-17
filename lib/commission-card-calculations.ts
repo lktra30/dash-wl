@@ -100,6 +100,10 @@ function groupDealsByEmployee(
 /**
  * Calcula a comissão para um funcionário baseado em seus deals
  * Fórmula: (valorVenda * multiplicadorCheckpoint) + (bonus * qtdVendas)
+ * 
+ * O cálculo respeita o businessModel:
+ * - TCV: comissão sobre valor total do contrato
+ * - MRR: comissão sobre valor mensal recorrente
  */
 function calculateEmployeeCommission(
   deals: Deal[],
@@ -182,9 +186,9 @@ export function calculateSDRCommissionsFromDeals(
   settings: CommissionSettings,
   businessModel: "TCV" | "MRR"
 ): RoleCommissionSummary {
-  // Filtrar apenas deals ganhos que têm SDR
+  // Filtrar apenas deals ganhos que têm SDR e que têm contact válido (não órfãos)
   const wonDealsWithSDR = deals.filter(
-    deal => deal.status === 'won' && deal.sdrId
+    deal => deal.status === 'won' && deal.sdrId && deal.contactId
   )
   
   // Agrupar por SDR
@@ -227,12 +231,27 @@ export function calculateSDRCommissionsFromDeals(
 export function calculateCloserCommissionsFromDeals(
   deals: Deal[],
   settings: CommissionSettings,
-  businessModel: "TCV" | "MRR"
+  businessModel: "TCV" | "MRR",
+  contacts?: any[] // Optional contacts to find closerId
 ): RoleCommissionSummary {
-  // Filtrar apenas deals ganhos que têm Closer
-  const wonDealsWithCloser = deals.filter(
-    deal => deal.status === 'won' && deal.closerId
-  )
+  let wonDealsWithCloser: Deal[]
+  
+  // If contacts provided, use them to find closerId
+  if (contacts && contacts.length > 0) {
+    const wonDeals = deals.filter(deal => deal.status === 'won' && deal.contactId)
+    wonDealsWithCloser = wonDeals.map(deal => {
+      const contact = contacts.find(c => c.id === deal.contactId)
+      return {
+        ...deal,
+        closerId: contact?.closerId || deal.closerId || deal.assignedTo
+      }
+    }).filter(deal => !!deal.closerId)
+  } else {
+    // Filtrar apenas deals ganhos que têm Closer e que têm contact válido (não órfãos)
+    wonDealsWithCloser = deals.filter(
+      deal => deal.status === 'won' && deal.closerId && deal.contactId
+    )
+  }
   
   // Agrupar por Closer
   const dealsByCloser = groupDealsByEmployee(wonDealsWithCloser, 'closer')
@@ -279,13 +298,17 @@ export function calculateCloserCommissionsFromDeals(
 export function calculateTotalCommissionsCard(
   deals: Deal[],
   settings: CommissionSettings,
-  businessModel: "TCV" | "MRR" = "TCV"
+  businessModel: "TCV" | "MRR" = "TCV",
+  contacts?: any[] // Optional contacts
 ): TotalCommissionsCard {
+  // Filtrar apenas deals válidos (com contact_id) para evitar deals órfãos
+  const validDeals = deals.filter(deal => !!deal.contactId)
+  
   // Calcular comissões dos SDRs
-  const sdrSummary = calculateSDRCommissionsFromDeals(deals, settings, businessModel)
+  const sdrSummary = calculateSDRCommissionsFromDeals(validDeals, settings, businessModel)
   
   // Calcular comissões dos Closers
-  const closerSummary = calculateCloserCommissionsFromDeals(deals, settings, businessModel)
+  const closerSummary = calculateCloserCommissionsFromDeals(validDeals, settings, businessModel, contacts)
   
   // Agregar totais
   const totalSales = sdrSummary.totalSales + closerSummary.totalSales
@@ -293,7 +316,7 @@ export function calculateTotalCommissionsCard(
   
   // Note: Se um deal tem tanto SDR quanto Closer, as vendas serão contadas duas vezes
   // Para evitar isso, vamos calcular o total real de vendas
-  const wonDeals = deals.filter(deal => deal.status === 'won')
+  const wonDeals = validDeals.filter(deal => deal.status === 'won')
   const actualTotalSales = wonDeals.reduce((sum, deal) => sum + calculateDealValue(deal, businessModel), 0)
   const actualTotalDeals = wonDeals.length
   

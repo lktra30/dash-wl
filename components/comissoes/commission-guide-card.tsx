@@ -39,6 +39,48 @@ export function CommissionGuideCard() {
               </AlertDescription>
             </Alert>
 
+            <div className="border rounded-lg p-4 space-y-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-purple-500" />
+                <h3 className="font-semibold">Modelo de Negócio e Comissões</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                O cálculo de comissões é <strong>sensível ao modelo de negócio</strong> configurado:
+              </p>
+              <div className="grid gap-3 mt-3">
+                <div className="flex items-start gap-3 p-3 bg-white dark:bg-gray-900 rounded-md border">
+                  <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900">TCV</Badge>
+                  <div className="text-sm space-y-1">
+                    <strong>Total Contract Value (Valor Total do Contrato)</strong>
+                    <p className="text-muted-foreground">
+                      Comissão calculada sobre o <strong>valor total</strong> da venda.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>Exemplo:</strong> Venda de R$ 100.000 → Comissão de 10% = <strong>R$ 10.000</strong> (pago uma vez)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-white dark:bg-gray-900 rounded-md border">
+                  <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900">MRR</Badge>
+                  <div className="text-sm space-y-1">
+                    <strong>Monthly Recurring Revenue (Receita Mensal Recorrente)</strong>
+                    <p className="text-muted-foreground">
+                      Comissão calculada sobre o <strong>valor mensal</strong> da venda.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <strong>Exemplo:</strong> Venda de R$ 100.000 por 6 meses → MRR = R$ 16.666,67/mês → Comissão de 10% = <strong>R$ 1.666,67/mês</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <Alert className="mt-3">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  O modelo de negócio é configurado nas <strong>Configurações do Whitelabel</strong> e afeta tanto as métricas de receita quanto o cálculo de comissões.
+                </AlertDescription>
+              </Alert>
+            </div>
+
             <div className="space-y-4">
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">

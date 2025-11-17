@@ -163,10 +163,11 @@ export interface MetaAdsMetrics {
   totalRevenue: number
   roas: number // Return on Ad Spend
   roi: number // Return on Investment (%)
-  cac: number // Customer Acquisition Cost (Investimento por Lead)
+  cac: number // Customer Acquisition Cost (Investimento por Venda)
   cpc: number // Cost Per Click
   ctr: number // Click Through Rate (%)
   totalLeads: number // Total de leads no período
+  totalSales: number // Total de vendas no período (estágios que contam como venda)
 }
 
 export interface MetaAdsTimeSeriesData {
@@ -291,6 +292,9 @@ export interface Meeting {
   id: string
   whitelabelId: string
   sdrId: string
+  sdrName?: string
+  closerId?: string
+  closerName?: string
   contactId?: string
   dealId?: string
   title: string

@@ -14,12 +14,31 @@ import { DollarSign, Target, TrendingUp, Award } from "lucide-react"
 interface UserCommissionCardProps {
   metrics: SDRMetrics | CloserMetrics
   role: 'sdr' | 'closer'
+  businessModel?: "TCV" | "MRR"
 }
 
-export function UserCommissionCard({ metrics, role }: UserCommissionCardProps) {
+export function UserCommissionCard({ metrics, role, businessModel = 'TCV' }: UserCommissionCardProps) {
   const isSdr = role === 'sdr'
   const sdrMetrics = isSdr ? (metrics as SDRMetrics) : null
   const closerMetrics = !isSdr ? (metrics as CloserMetrics) : null
+
+  // Get progress bar color based on checkpoint tier
+  const getProgressBarColor = (tier: number): string => {
+    switch (tier) {
+      case 0:
+        return 'bg-gray-500'
+      case 1:
+        return 'bg-yellow-500'
+      case 2:
+        return 'bg-orange-500'
+      case 3:
+        return 'bg-green-500'
+      default:
+        return 'bg-gray-500'
+    }
+  }
+
+  const progressBarColor = getProgressBarColor(metrics.checkpointTier)
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -92,7 +111,7 @@ export function UserCommissionCard({ metrics, role }: UserCommissionCardProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <DollarSign className="h-4 w-4" />
-                  <span>Total de Vendas</span>
+                  <span>Total de Vendas{businessModel === 'MRR' && <span className="ml-1 text-purple-600 dark:text-purple-400 font-medium">(MRR)</span>}</span>
                 </div>
                 <p className="text-xl font-semibold">{formatCurrency(closerMetrics.totalSales)}</p>
               </div>
@@ -131,7 +150,7 @@ export function UserCommissionCard({ metrics, role }: UserCommissionCardProps) {
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
             <div 
-              className="bg-blue-600 h-2 rounded-full transition-all"
+              className={`${progressBarColor} h-2 rounded-full transition-all`}
               style={{ width: `${Math.min(metrics.targetAchievementPercent, 100)}%` }}
             />
           </div>

@@ -4,10 +4,10 @@ import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, Building, Pencil } from "lucide-react"
+import { Mail, Phone, Building, Pencil, Calendar, DollarSign } from "lucide-react"
 import { EditContactSheet } from "./edit-contact-sheet"
 import { useTheme } from "@/hooks/use-theme"
-import type { Contact } from "@/lib/types"
+import type { Contact, PipelineStage } from "@/lib/types"
 
 interface ContactCardProps {
   contact: Contact
@@ -16,6 +16,7 @@ interface ContactCardProps {
   onContactUpdated: () => void
   dataService: any
   isDragging?: boolean
+  currentStage?: PipelineStage // Optional - to check if we should show deal value
 }
 
 export function ContactCard({ 
@@ -24,7 +25,8 @@ export function ContactCard({
   onDragEnd,
   onContactUpdated, 
   dataService,
-  isDragging = false 
+  isDragging = false,
+  currentStage
 }: ContactCardProps) {
   const { brandColor } = useTheme()
   const [isEditing, setIsEditing] = React.useState(false)
@@ -76,6 +78,43 @@ export function ContactCard({
                 <div className="flex items-center gap-2 text-xs">
                   <Phone className="h-3 w-3 text-muted-foreground" />
                   <span className="text-muted-foreground">{contact.phone}</span>
+                </div>
+              )}
+              {(contact as any).meetingDate && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Calendar className="h-3 w-3 text-blue-500" />
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">
+                    Reunião: {new Date((contact as any).meetingDate).toLocaleDateString('pt-BR', { 
+                      day: '2-digit', 
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
+              {(contact as any).saleDate && (
+                <div className="flex items-center gap-2 text-xs">
+                  <DollarSign className="h-3 w-3 text-green-500" />
+                  <span className="text-green-600 dark:text-green-400 font-medium">
+                    Venda: {new Date((contact as any).saleDate).toLocaleDateString('pt-BR', { 
+                      day: '2-digit', 
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
+              {contact.dealValue && contact.dealValue > 0 && currentStage?.countsAsSale && (
+                <div className="flex items-center gap-2 text-xs">
+                  <DollarSign className="h-3 w-3 text-emerald-500" />
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: 'BRL' 
+                    }).format(contact.dealValue)}
+                  </span>
                 </div>
               )}
             </div>

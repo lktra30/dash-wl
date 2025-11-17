@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { Plus, Mail, Phone, Briefcase, Trash2, X, Save, Users, Edit, AlertCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import type { Employee } from "@/lib/types"
-import { EditEmployeeSheet } from "@/components/colaboradores"
+import { EditEmployeeSheet, AddEmployeeSheet } from "@/components/colaboradores"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,21 +31,11 @@ export default function EmployeesPage() {
   const { user, whitelabel } = useAuth()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [deleteEmployeeId, setDeleteEmployeeId] = useState<string | null>(null)
   const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "",
-    department: "",
-    hire_date: "",
-    status: "active" as "active" | "inactive" | "on_leave",
-    user_role: "colaborador" as "admin" | "gestor" | "colaborador",
-  })
 
   useEffect(() => {
     if (user) {
@@ -69,30 +58,15 @@ export default function EmployeesPage() {
   }
 
   const handleAddEmployee = () => {
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      role: "",
-      department: "",
-      hire_date: new Date().toISOString().split("T")[0],
-      status: "active",
-      user_role: "colaborador",
-    })
-    setIsAddDialogOpen(true)
+    setIsAddSheetOpen(true)
   }
 
-  const handleSaveNewEmployee = async () => {
-    if (!formData.name || !formData.email || !formData.role || !formData.department) {
-      alert("Por favor, preencha todos os campos obrigatórios.")
-      return
-    }
-
+  const handleCreateEmployee = async (employeeData: Partial<Employee>) => {
     try {
       const response = await fetch("/api/dashboard/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(employeeData),
       })
 
       if (!response.ok) {
@@ -101,21 +75,8 @@ export default function EmployeesPage() {
       }
 
       await loadEmployees()
-      setIsAddDialogOpen(false)
-      
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        role: "",
-        department: "",
-        hire_date: new Date().toISOString().split("T")[0],
-        status: "active",
-        user_role: "colaborador",
-      })
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Erro ao criar colaborador. Tente novamente.")
+      throw error
     }
   }
 
@@ -260,211 +221,24 @@ export default function EmployeesPage() {
     <DashboardLayout>
       <DashboardHeader title="Colaboradores" description="Gerencie sua equipe e colaboradores">
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="gap-2 cursor-pointer"
-              onClick={handleAddEmployee}
-              style={{
-                backgroundColor: whitelabel?.brandColor || '#3b82f6',
-                color: 'white'
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Adicionar Colaborador
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background">
-            <DialogHeader>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <DialogTitle className="text-xl">Novo Colaborador</DialogTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Adicione um novo colaborador à equipe</p>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  Nome Completo <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Nome completo do colaborador"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-background"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    Email <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="email@exemplo.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    placeholder="(11) 99999-9999"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">
-                    Cargo <span className="text-destructive">*</span>
-                  </Label>
-                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                    <SelectTrigger className="bg-background cursor-pointer">
-                      <SelectValue placeholder="Selecione o cargo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SDR">SDR</SelectItem>
-                      <SelectItem value="Closer">Closer</SelectItem>
-                      <SelectItem value="Analista de Marketing">Analista de Marketing</SelectItem>
-                      <SelectItem value="Desenvolvedor">Desenvolvedor</SelectItem>
-                      <SelectItem value="Analista de Suporte">Analista de Suporte</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department">
-                    Departamento <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={formData.department}
-                    onValueChange={(value) => setFormData({ ...formData, department: value })}
-                  >
-                    <SelectTrigger className="bg-background cursor-pointer">
-                      <SelectValue placeholder="Selecione o departamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Vendas">Vendas</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="TI">TI</SelectItem>
-                      <SelectItem value="Suporte">Suporte</SelectItem>
-                      <SelectItem value="Financeiro">Financeiro</SelectItem>
-                      <SelectItem value="RH">RH</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hire_date">Data de Contratação</Label>
-                  <Input
-                    id="hire_date"
-                    type="date"
-                    value={formData.hire_date}
-                    onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: "active" | "inactive") => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger className="bg-background cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="user_role">
-                    Nível de Acesso <span className="text-destructive">*</span>
-                  </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-primary transition-colors" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs bg-popover text-popover-foreground border border-border shadow-lg">
-                        <div className="space-y-2 text-sm">
-                          <div>
-                            <p className="font-semibold text-foreground">Admin:</p>
-                            <p className="text-muted-foreground">Acesso total ao sistema</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">Gestor:</p>
-                            <p className="text-muted-foreground">Acesso à metas, equipes e colaboradores</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">Colaborador:</p>
-                            <p className="text-muted-foreground">Acesso somente à CRM</p>
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Select
-                  value={formData.user_role}
-                  onValueChange={(value: "admin" | "gestor" | "colaborador") =>
-                    setFormData({ ...formData, user_role: value })
-                  }
-                >
-                  <SelectTrigger className="bg-background cursor-pointer">
-                    <SelectValue placeholder="Selecione o nível de acesso" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="gestor">Gestor</SelectItem>
-                    <SelectItem value="colaborador">Colaborador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="gap-2 cursor-pointer">
-                <X className="h-4 w-4" />
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveNewEmployee}
-                className="gap-2 cursor-pointer"
-                style={{
-                  backgroundColor: whitelabel?.brandColor || 'bg-primary',
-                  color: 'white'
-                }}
-              >
-                <Save className="h-4 w-4" />
-                Criar Colaborador
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="gap-2 cursor-pointer"
+          onClick={handleAddEmployee}
+          style={{
+            backgroundColor: whitelabel?.brandColor || '#3b82f6',
+            color: 'white'
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar Colaborador
+        </Button>
       </DashboardHeader>
+
+      <AddEmployeeSheet
+        open={isAddSheetOpen}
+        onOpenChange={setIsAddSheetOpen}
+        onCreate={handleCreateEmployee}
+      />
 
       <AlertDialog open={!!deleteEmployeeId} onOpenChange={() => setDeleteEmployeeId(null)}>
         <AlertDialogContent>
