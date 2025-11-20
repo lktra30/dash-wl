@@ -87,55 +87,58 @@ export default function CalendarioPage() {
         <DashboardHeader 
           title="Calendário" 
           description="Visualize todas as reuniões agendadas e realizadas"
-        >
-          {/* SDR Filter */}
-          <Select value={selectedSdr} onValueChange={setSelectedSdr}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos os SDRs" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os SDRs</SelectItem>
-              {employees
-                .filter(emp => emp.user_role === 'colaborador' || emp.user_role === 'admin')
-                .map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          {/* Closer Filter */}
-          <Select value={selectedCloser} onValueChange={setSelectedCloser}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos os Closers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Closers</SelectItem>
-              {employees
-                .filter(emp => emp.user_role === 'colaborador' || emp.user_role === 'admin')
-                .map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-
-          {/* Clear Filters Button */}
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearFilters}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Limpar
-            </Button>
-          )}
-        </DashboardHeader>
+        />
         <div className="flex-1 space-y-4 p-8 pt-6">
+          {/* Filtros abaixo do título em mobile */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            {/* SDR Filter */}
+            <Select value={selectedSdr} onValueChange={setSelectedSdr}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Todos os SDRs" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os SDRs</SelectItem>
+                {employees
+                  .filter(emp => emp.user_role === 'colaborador' || emp.user_role === 'admin')
+                  .map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            {/* Closer Filter */}
+            <Select value={selectedCloser} onValueChange={setSelectedCloser}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Todos os Closers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Closers</SelectItem>
+                {employees
+                  .filter(emp => emp.user_role === 'colaborador' || emp.user_role === 'admin')
+                  .map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="gap-2 w-full sm:w-auto"
+              >
+                <X className="h-4 w-4" />
+                Limpar
+              </Button>
+            )}
+          </div>
+          
           <CalendarViewCustom meetings={meetings} />
         </div>
     </DashboardLayout>

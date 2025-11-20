@@ -22,9 +22,10 @@ interface LeadsEvolutionChartProps {
   data: LeadsEvolutionData[]
   brandColor?: string
   isLoading?: boolean
+  dateRangeLabel?: string
 }
 
-export function LeadsEvolutionChart({ data, brandColor = "#6366f1", isLoading = false }: LeadsEvolutionChartProps) {
+export function LeadsEvolutionChart({ data, brandColor = "#6366f1", isLoading = false, dateRangeLabel }: LeadsEvolutionChartProps) {
   if (isLoading) {
     return (
       <Card className="animate-pulse">
@@ -45,7 +46,7 @@ export function LeadsEvolutionChart({ data, brandColor = "#6366f1", isLoading = 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-            Evolução de Leads (Últimos 12 Meses)
+            Evolução de Leads ({dateRangeLabel || "Últimos 12 Meses"})
           </CardTitle>
           <CardDescription>Reuniões e vendas realizadas ao longo do tempo</CardDescription>
         </CardHeader>
@@ -114,7 +115,7 @@ export function LeadsEvolutionChart({ data, brandColor = "#6366f1", isLoading = 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-          Evolução de Leads (Últimos 12 Meses)
+          Evolução de Leads ({dateRangeLabel || "Últimos 12 Meses"})
         </CardTitle>
         <CardDescription>Reuniões e vendas realizadas ao longo do tempo</CardDescription>
       </CardHeader>

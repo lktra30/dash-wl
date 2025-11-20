@@ -26,19 +26,18 @@ interface FunnelData {
 
 interface Props {
   pipelineId?: string;
-  fromDate?: string;
-  toDate?: string;
+  dateRangeLabel?: string;
   brandColor?: string;
 }
 
-export function FunnelConversionChart({ pipelineId, fromDate, toDate, brandColor = "#6366f1" }: Props) {
+export function FunnelConversionChart({ pipelineId, dateRangeLabel, brandColor = "#6366f1" }: Props) {
   const [data, setData] = useState<FunnelData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
-  }, [pipelineId, fromDate, toDate]);
+  }, [pipelineId]);
 
   const fetchData = async () => {
     try {
@@ -47,8 +46,6 @@ export function FunnelConversionChart({ pipelineId, fromDate, toDate, brandColor
 
       const params = new URLSearchParams({ metric: 'funnel-conversion' });
       if (pipelineId) params.append('pipelineId', pipelineId);
-      if (fromDate) params.append('fromDate', fromDate);
-      if (toDate) params.append('toDate', toDate);
 
       const response = await fetch(`/api/dashboard/advanced-metrics?${params}`);
       if (!response.ok) throw new Error('Falha ao carregar dados');
@@ -66,7 +63,7 @@ export function FunnelConversionChart({ pipelineId, fromDate, toDate, brandColor
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Taxa de Conversão do Funil</CardTitle>
+          <CardTitle>Taxa de Conversão do Funil ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
           <CardDescription>Conversão entre etapas do pipeline</CardDescription>
         </CardHeader>
         <CardContent>
@@ -112,7 +109,7 @@ export function FunnelConversionChart({ pipelineId, fromDate, toDate, brandColor
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Taxa de Conversão do Funil</CardTitle>
+        <CardTitle>Taxa de Conversão do Funil ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
         <CardDescription>
           Conversão entre etapas do pipeline
         </CardDescription>

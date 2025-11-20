@@ -2,7 +2,6 @@
 
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { DateRangeFilter, getDefaultDateRange, type DateRangeFilterValue } from "@/components/date-range-filter"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +34,6 @@ export default function EmployeesPage() {
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [deleteEmployeeId, setDeleteEmployeeId] = useState<string | null>(null)
-  const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
 
   useEffect(() => {
     if (user) {
@@ -220,7 +218,6 @@ export default function EmployeesPage() {
   return (
     <DashboardLayout>
       <DashboardHeader title="Colaboradores" description="Gerencie sua equipe e colaboradores">
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
         <Button
           className="gap-2 cursor-pointer"
           onClick={handleAddEmployee}
@@ -230,7 +227,7 @@ export default function EmployeesPage() {
           }}
         >
           <Plus className="h-4 w-4" />
-          Adicionar Colaborador
+          <span className="hidden sm:inline">Adicionar Colaborador</span>
         </Button>
       </DashboardHeader>
 

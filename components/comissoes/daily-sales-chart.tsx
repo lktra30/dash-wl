@@ -53,17 +53,14 @@ export function DailySalesChart({
     const isCurrentMonth = periodMonth === now.getMonth() + 1 && periodYear === now.getFullYear()
     const currentDay = isCurrentMonth ? now.getDate() : daysInMonth
 
-    // Filtrar deals ganhos do período
-    const wonDeals = deals.filter(deal => {
-      if (deal.status !== 'won') return false
-      const dealDate = new Date(deal.updatedAt)
-      return dealDate.getMonth() + 1 === periodMonth && dealDate.getFullYear() === periodYear
-    })
+    // Os deals já vêm filtrados por período e status='won' da página pai
+    // Apenas filtrar deals com saleDate válida
+    const validDeals = deals.filter(deal => deal.saleDate)
 
-    // Agrupar vendas por dia
+    // Agrupar vendas por dia usando saleDate
     const dailySales: { [key: number]: number } = {}
-    wonDeals.forEach(deal => {
-      const dealDate = new Date(deal.updatedAt)
+    validDeals.forEach(deal => {
+      const dealDate = new Date(deal.saleDate!)
       const day = dealDate.getDate()
       dailySales[day] = (dailySales[day] || 0) + Number(deal.value)
     })
@@ -84,16 +81,16 @@ export function DailySalesChart({
     const totalBusinessDays = countBusinessDays(daysInMonth)
 
     // Gerar dados para TODOS os dias do mês
+    // O gráfico mostra VALORES ACUMULADOS - cada dia soma ao total anterior
+    // Agora incluindo vendas futuras (com saleDate já definida)
     const data: DailyData[] = []
     let cumulative = 0
 
     for (let day = 1; day <= daysInMonth; day++) {
       const sales = dailySales[day] || 0
       
-      // Só acumular vendas até o dia atual (se for mês corrente)
-      if (day <= currentDay) {
-        cumulative += sales
-      }
+      // Acumular TODAS as vendas do mês, incluindo as com saleDate futura
+      cumulative += sales
 
       const date = new Date(periodYear, periodMonth - 1, day)
       const businessDaysUpToNow = countBusinessDays(day)
@@ -102,8 +99,7 @@ export function DailySalesChart({
         day,
         date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
         sales,
-        // Mostrar vendas acumuladas apenas até o dia atual
-        cumulativeSales: day <= currentDay ? cumulative : 0,
+        cumulativeSales: cumulative,
         targetLinear: (monthlyTarget / daysInMonth) * day,
         targetBusinessDays: totalBusinessDays > 0 ? (monthlyTarget / totalBusinessDays) * businessDaysUpToNow : 0
       })
@@ -144,10 +140,10 @@ export function DailySalesChart({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-              Vendas Diárias vs Meta
+              Vendas Acumuladas vs Meta
             </CardTitle>
             <CardDescription>
-              Progresso acumulado de vendas comparado à meta mensal
+              Progresso acumulado dia a dia - cada ponto soma ao valor anterior até atingir a meta mensal
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">

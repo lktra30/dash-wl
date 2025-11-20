@@ -66,14 +66,14 @@ export const DynamicPipelineFunnel = React.memo(({ stages, pipelineColor = "#636
             {/* Progress Bar */}
             <div className="relative h-10 bg-muted rounded-lg overflow-hidden">
               <div
-                className="absolute inset-y-0 left-0 rounded-lg transition-all duration-500 flex items-center justify-between px-3"
+                className="absolute inset-y-0 left-0 rounded-lg transition-all duration-500 flex items-center justify-center px-2"
                 style={{
-                  width: `${Math.max(widthPercentage, 15)}%`, // Minimum 15% for visibility
+                  width: `${Math.max(widthPercentage, 25)}%`, // Minimum 25% for visibility on mobile
                   backgroundColor: stage.stageColor,
                   opacity: 0.8,
                 }}
               >
-                <span className="text-sm font-semibold text-white">
+                <span className="text-xs sm:text-sm font-semibold text-white truncate">
                   {stage.count} {stage.count === 1 ? 'lead' : 'leads'}
                 </span>
               </div>

@@ -26,9 +26,10 @@ interface SalesEvolutionChartProps {
   data: SalesEvolutionData[]
   brandColor?: string
   isLoading?: boolean
+  dateRangeLabel?: string
 }
 
-export function SalesEvolutionChart({ data, brandColor = "#6366f1", isLoading = false }: SalesEvolutionChartProps) {
+export function SalesEvolutionChart({ data, brandColor = "#6366f1", isLoading = false, dateRangeLabel }: SalesEvolutionChartProps) {
   if (isLoading) {
     return (
       <Card className="animate-pulse">
@@ -49,7 +50,7 @@ export function SalesEvolutionChart({ data, brandColor = "#6366f1", isLoading = 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-            Evolução de Vendas (Últimos 12 Meses)
+            Evolução de Vendas ({dateRangeLabel || "Últimos 12 Meses"})
           </CardTitle>
           <CardDescription>Receita de vendas fechadas ao longo do tempo</CardDescription>
         </CardHeader>
@@ -110,7 +111,7 @@ export function SalesEvolutionChart({ data, brandColor = "#6366f1", isLoading = 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" style={{ color: brandColor }} />
-          Evolução de Vendas (Últimos 12 Meses)
+          Evolução de Vendas ({dateRangeLabel || "Últimos 12 Meses"})
         </CardTitle>
         <CardDescription>Receita de vendas fechadas ao longo do tempo</CardDescription>
       </CardHeader>

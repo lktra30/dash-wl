@@ -273,10 +273,10 @@ export function AddContactSheet({ onContactAdded, dataService, canCreate }: AddC
       <SheetTrigger asChild>
         <Button style={{ backgroundColor: brandColor }} className="hover:opacity-90 cursor-pointer">
           <Plus className="h-4 w-4" />
-          Adicionar Contato
+          <span className="hidden sm:inline ml-2">Adicionar Contato</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[40vw] min-w-[500px] max-w-[800px]">
+      <SheetContent className="w-full sm:w-[90vw] sm:max-w-[500px] lg:max-w-[800px]">
         <SheetHeader>
           <SheetTitle className="text-xl" style={{ color: brandColor }}>Adicionar Novo Contato</SheetTitle>
           <SheetDescription>

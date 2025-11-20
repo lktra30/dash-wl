@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Team, Employee } from "@/lib/types"
@@ -241,7 +240,7 @@ export function TeamEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{team ? "Editar Equipe" : "Nova Equipe"}</DialogTitle>
           <DialogDescription>
@@ -251,8 +250,8 @@ export function TeamEditDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6 mt-4">
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin">
+          <div className="space-y-6 mt-4 pb-4">
             {/* Team Information Form */}
             <form id="team-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -361,7 +360,7 @@ export function TeamEditDialog({
                       </h3>
                     </div>
                     {currentMembers.length > 0 ? (
-                      <div className="space-y-2 border rounded-lg p-3 max-h-[250px] overflow-y-auto">
+                      <div className="space-y-2 border rounded-lg p-3 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
                         {currentMembers.map((member) => (
                           <div
                             key={member.id}
@@ -419,7 +418,7 @@ export function TeamEditDialog({
                         Carregando colaboradores...
                       </div>
                     ) : availableEmployees.length > 0 ? (
-                      <div className="space-y-2 border rounded-lg p-3 max-h-[350px] overflow-y-auto">
+                      <div className="space-y-2 border rounded-lg p-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
                         {availableEmployees.map((employee) => {
                           const isInAnotherTeam = employee.team_id && employee.team_id !== team?.id
                           const badgeVariant = isInAnotherTeam ? "secondary" : "outline"
@@ -480,9 +479,9 @@ export function TeamEditDialog({
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="border-t pt-4 mt-4">
           <Button
             type="button"
             variant="outline"

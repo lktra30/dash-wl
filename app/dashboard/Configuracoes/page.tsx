@@ -104,7 +104,7 @@ export default function SettingsPage() {
         />
 
         <div className="flex-1 overflow-hidden p-6">
-          <div className="h-full flex flex-col gap-6 max-w-6xl mx-auto">
+          <div className="h-full flex flex-col gap-6 max-w-6xl mx-auto overflow-x-hidden">
             <Tabs defaultValue="perfil" className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="grid w-full grid-cols-4 h-auto p-1">
                 <TabsTrigger value="perfil" className="flex items-center gap-2 py-3">
@@ -131,13 +131,13 @@ export default function SettingsPage() {
               </TabsList>
 
               <div className="flex-1 overflow-auto mt-6">
-                <TabsContent value="perfil" className="m-0 h-full">
+                <TabsContent value="perfil" className="m-0 h-full overflow-x-hidden">
                   <div className="max-w-3xl">
                     <UserProfileCard user={user} />
                   </div>
                 </TabsContent>
 
-                <TabsContent value="negocio" className="m-0 h-full">
+                <TabsContent value="negocio" className="m-0 h-full overflow-x-hidden">
                   <div className="max-w-3xl">
                     <BusinessSettingsCard
                       whitelabelName={whitelabelName}
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="integracoes" className="m-0 h-full">
+                <TabsContent value="integracoes" className="m-0 h-full overflow-x-hidden">
                   <div className="max-w-4xl space-y-4">
                     {/* Status Header */}
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border">
@@ -204,7 +204,7 @@ export default function SettingsPage() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="personalizacao" className="m-0 h-full">
+                <TabsContent value="personalizacao" className="m-0 h-full overflow-x-hidden">
                   <div className="max-w-3xl">
                     <BrandCustomizationCard 
                       brandColor={tempBrandColor}

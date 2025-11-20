@@ -230,9 +230,12 @@ export const AppSidebar = React.memo(function AppSidebar({ ...props }: React.Com
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="right"
-                align="end"
+                side="bottom"
+                align="start"
                 sideOffset={4}
+                alignOffset={-8}
+                avoidCollisions={true}
+                collisionPadding={8}
               >
                 <div className="p-2 text-xs text-muted-foreground">
                   <div className="font-medium text-foreground mb-1">{user.name}</div>

@@ -83,7 +83,7 @@ export default function ContactsPage() {
         />
       </DashboardHeader>
 
-      <div className="flex-1 flex flex-col min-h-0 px-6 pt-6 pb-6">
+      <div className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 pt-6 pb-6 overflow-x-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Carregando contatos...</p>

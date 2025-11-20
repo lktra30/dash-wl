@@ -145,10 +145,11 @@ export default function CommissionsPage() {
     return { sdrMetrics, closerMetrics }
   }, [settings, meetings, deals, contacts, employees, currentMonth, currentYear, whitelabel?.businessModel])
 
-  // Filter deals by current period (month/year)
+  // Filter deals by current period (month/year) and ensure saleDate exists
   const filteredDeals = useMemo(() => {
     return deals.filter(deal => {
-      if (!deal.saleDate) return false
+      // Must have saleDate and be won
+      if (!deal.saleDate || deal.status !== 'won') return false
       
       const saleDate = new Date(deal.saleDate)
       const dealMonth = saleDate.getMonth() + 1

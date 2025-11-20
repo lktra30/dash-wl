@@ -20,18 +20,17 @@ interface LtvCacData {
 
 interface Props {
   brandColor?: string;
-  fromDate?: string;
-  toDate?: string;
+  dateRangeLabel?: string;
 }
 
-export function LtvCacComparison({ brandColor = "#6366f1", fromDate, toDate }: Props = {}) {
+export function LtvCacComparison({ brandColor = "#6366f1", dateRangeLabel }: Props = {}) {
   const [data, setData] = useState<LtvCacData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
-  }, [fromDate, toDate]);
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -39,10 +38,6 @@ export function LtvCacComparison({ brandColor = "#6366f1", fromDate, toDate }: P
       setError(null);
 
       const params = new URLSearchParams({ metric: 'ltv-cac' });
-      
-      // Add date filters if provided
-      if (fromDate) params.append('fromDate', fromDate);
-      if (toDate) params.append('toDate', toDate);
       
       const response = await fetch(`/api/dashboard/advanced-metrics?${params}`);
       if (!response.ok) throw new Error('Falha ao carregar dados');
@@ -60,7 +55,7 @@ export function LtvCacComparison({ brandColor = "#6366f1", fromDate, toDate }: P
     return (
       <Card>
         <CardHeader>
-          <CardTitle>LTV vs CAC</CardTitle>
+          <CardTitle>LTV vs CAC ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
           <CardDescription>Lifetime Value vs Customer Acquisition Cost</CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,7 +100,7 @@ export function LtvCacComparison({ brandColor = "#6366f1", fromDate, toDate }: P
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>LTV vs CAC</CardTitle>
+            <CardTitle>LTV vs CAC ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
             <CardDescription>
               Lifetime Value vs Customer Acquisition Cost
             </CardDescription>

@@ -12,11 +12,17 @@ import { GrowthRateChart } from "@/components/metrics/growth-rate-chart"
 import { TemporalEvolutionChart } from "@/components/metrics/temporal-evolution-chart"
 import { LtvCacComparison } from "@/components/metrics/ltv-cac-comparison"
 import { useAuth } from "@/hooks/use-auth"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { formatDateRangeLabel } from "@/lib/utils"
 
 export default function MetricsPage() {
   const { user, whitelabel, isLoading: authLoading } = useAuth()
   const [dateRange, setDateRange] = useState<DateRangeFilterValue>(getDefaultDateRange())
+  
+  // Compute formatted date range label
+  const dateRangeLabel = useMemo(() => {
+    return formatDateRangeLabel(dateRange.from, dateRange.to)
+  }, [dateRange.from, dateRange.to])
   
   // Sales Evolution state
   const [salesEvolutionData, setSalesEvolutionData] = useState<any[]>([])
@@ -134,17 +140,18 @@ export default function MetricsPage() {
                 data={salesEvolutionData}
                 brandColor={whitelabel.brandColor}
                 isLoading={isSalesEvolutionLoading}
+                dateRangeLabel={dateRangeLabel}
               />
               <LeadsEvolutionChart
                 data={leadsEvolutionData}
                 brandColor={whitelabel.brandColor}
                 isLoading={isLeadsEvolutionLoading}
+                dateRangeLabel={dateRangeLabel}
               />
               <CustomerEvolutionChart 
                 months={12} 
                 brandColor={whitelabel.brandColor}
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
+                dateRangeLabel={dateRangeLabel}
               />
             </div>
           </section>
@@ -159,14 +166,12 @@ export default function MetricsPage() {
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
               <FunnelConversionChart 
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
                 brandColor={whitelabel.brandColor}
+                dateRangeLabel={dateRangeLabel}
               />
               <PipelineBreakdownChart 
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
                 brandColor={whitelabel.brandColor}
+                dateRangeLabel={dateRangeLabel}
               />
             </div>
           </section>
@@ -183,14 +188,12 @@ export default function MetricsPage() {
               <GrowthRateChart 
                 months={12} 
                 brandColor={whitelabel.brandColor}
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
+                dateRangeLabel={dateRangeLabel}
               />
               <TemporalEvolutionChart 
                 months={12} 
                 brandColor={whitelabel.brandColor}
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
+                dateRangeLabel={dateRangeLabel}
               />
             </div>
           </section>
@@ -206,8 +209,7 @@ export default function MetricsPage() {
             <div className="grid gap-6">
               <LtvCacComparison 
                 brandColor={whitelabel.brandColor}
-                fromDate={dateRange.from?.toISOString()}
-                toDate={dateRange.to?.toISOString()}
+                dateRangeLabel={dateRangeLabel}
               />
             </div>
           </section>

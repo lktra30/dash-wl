@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -57,6 +57,16 @@ export function CalendarViewCustom({ meetings }: CalendarViewCustomProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [expandedDay, setExpandedDay] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -96,6 +106,14 @@ export function CalendarViewCustom({ meetings }: CalendarViewCustomProps) {
   const handleEventClick = (meeting: Meeting) => {
     setSelectedMeeting(meeting)
     setIsDialogOpen(true)
+  }
+
+  const handleDayClick = (dateKey: string, dayMeetings: Meeting[]) => {
+    if (!isMobile) return
+    if (dayMeetings.length === 0) return
+    
+    // Se já está expandido, colapsa. Senão, expande
+    setExpandedDay(expandedDay === dateKey ? null : dateKey)
   }
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -152,54 +170,92 @@ export function CalendarViewCustom({ meetings }: CalendarViewCustomProps) {
               const dayMeetings = meetingsByDate.get(dateKey) || []
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isToday = isSameDay(day, new Date())
+              const isExpanded = expandedDay === dateKey
+              const hasMeetings = dayMeetings.length > 0
 
               return (
                 <div
                   key={index}
                   className={cn(
-                    "min-h-[100px] border rounded-lg p-2 bg-card hover:bg-accent/50 transition-colors",
+                    "border rounded-lg bg-card transition-all",
                     !isCurrentMonth && "opacity-50",
-                    isToday && "ring-2 ring-primary"
+                    isToday && "ring-2 ring-primary",
+                    // Mobile: altura mínima menor, expansível
+                    isMobile ? "min-h-[60px]" : "min-h-[100px]",
+                    isMobile && isExpanded && "col-span-7 min-h-[200px]",
+                    isMobile && hasMeetings && "cursor-pointer hover:bg-accent/50"
                   )}
+                  onClick={() => isMobile && handleDayClick(dateKey, dayMeetings)}
                 >
-                  <div className="text-sm font-medium mb-1">
-                    {format(day, "d")}
+                  <div className={cn(
+                    "p-2",
+                    isMobile && isExpanded && "border-b"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium">
+                        {format(day, "d")}
+                      </div>
+                      
+                      {/* Bolinha verde indicadora em mobile */}
+                      {isMobile && hasMeetings && !isExpanded && (
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Events */}
-                  <div className="space-y-1 overflow-y-auto max-h-[80px]">
-                    {dayMeetings.map((meeting) => (
-                      <div
-                        key={meeting.id}
-                        onClick={() => handleEventClick(meeting)}
-                        className={cn(
-                          "relative text-xs p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity",
-                          statusConfig[meeting.status].bg,
-                          statusConfig[meeting.status].text
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">
-                              {meeting.title}
-                            </div>
-                            <div className="flex items-center gap-1 text-[10px] opacity-90">
-                              <Clock className="h-2.5 w-2.5" />
-                              {format(parseISO(meeting.scheduledAt), "hh:mm a")}
-                            </div>
-                          </div>
-                          {meeting.status === 'scheduled' && (
-                            <Badge 
-                              variant="destructive" 
-                              className="h-4 w-4 p-0 flex items-center justify-center text-[8px] rounded-full"
-                            >
-                              !
-                            </Badge>
+                  {/* Events - Desktop: sempre visível, Mobile: só quando expandido */}
+                  {(!isMobile || isExpanded) && (
+                    <div className={cn(
+                      "space-y-1 overflow-y-auto",
+                      isMobile ? "p-3 max-h-[160px]" : "px-2 pb-2 max-h-[80px]"
+                    )}>
+                      {dayMeetings.length === 0 && isExpanded && (
+                        <p className="text-xs text-muted-foreground text-center py-2">
+                          Nenhuma reunião agendada
+                        </p>
+                      )}
+                      {dayMeetings.map((meeting) => (
+                        <div
+                          key={meeting.id}
+                          onClick={(e) => {
+                            if (isMobile) {
+                              e.stopPropagation()
+                            }
+                            handleEventClick(meeting)
+                          }}
+                          className={cn(
+                            "relative p-1.5 rounded cursor-pointer hover:opacity-80 transition-opacity",
+                            statusConfig[meeting.status].bg,
+                            statusConfig[meeting.status].text,
+                            isMobile ? "text-sm" : "text-xs"
                           )}
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">
+                                {meeting.title}
+                              </div>
+                              <div className={cn(
+                                "flex items-center gap-1 opacity-90",
+                                isMobile ? "text-xs" : "text-[10px]"
+                              )}>
+                                <Clock className={cn(isMobile ? "h-3 w-3" : "h-2.5 w-2.5")} />
+                                {format(parseISO(meeting.scheduledAt), "HH:mm")}
+                              </div>
+                            </div>
+                            {meeting.status === 'scheduled' && (
+                              <Badge 
+                                variant="destructive" 
+                                className="h-4 w-4 p-0 flex items-center justify-center text-[8px] rounded-full"
+                              >
+                                !
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}

@@ -23,18 +23,17 @@ interface CustomerData {
 interface Props {
   months?: number;
   brandColor?: string;
-  fromDate?: string;
-  toDate?: string;
+  dateRangeLabel?: string;
 }
 
-export function CustomerEvolutionChart({ months = 12, brandColor = "#6366f1", fromDate, toDate }: Props) {
+export function CustomerEvolutionChart({ months = 12, brandColor = "#6366f1", dateRangeLabel }: Props) {
   const [data, setData] = useState<CustomerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
-  }, [months, fromDate, toDate]);
+  }, [months]);
 
   const fetchData = async () => {
     try {
@@ -45,10 +44,6 @@ export function CustomerEvolutionChart({ months = 12, brandColor = "#6366f1", fr
         metric: 'customer-evolution',
         months: months.toString()
       });
-      
-      // Add date filters if provided
-      if (fromDate) params.append('fromDate', fromDate);
-      if (toDate) params.append('toDate', toDate);
 
       const response = await fetch(`/api/dashboard/advanced-metrics?${params}`);
       if (!response.ok) throw new Error('Falha ao carregar dados');
@@ -66,7 +61,7 @@ export function CustomerEvolutionChart({ months = 12, brandColor = "#6366f1", fr
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Evolução de Clientes</CardTitle>
+          <CardTitle>Evolução de Clientes ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
           <CardDescription>Novos clientes por mês</CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,7 +98,7 @@ export function CustomerEvolutionChart({ months = 12, brandColor = "#6366f1", fr
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Evolução de Clientes</CardTitle>
+            <CardTitle>Evolução de Clientes ({dateRangeLabel || "Últimos 12 Meses"})</CardTitle>
             <CardDescription>
               Novos clientes por mês
             </CardDescription>

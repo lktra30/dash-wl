@@ -362,9 +362,8 @@ export default function TeamsPage() {
         description="Gerencie suas equipes e acompanhe a competição"
       >
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        <Button onClick={handleCreateTeam} style={{ backgroundColor: whitelabel.brandColor }} className="cursor-pointer">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Equipe
+        <Button onClick={handleCreateTeam} style={{ backgroundColor: whitelabel.brandColor }} className="cursor-pointer" size="icon">
+          <Plus className="h-4 w-4" />
         </Button>
       </DashboardHeader>
 

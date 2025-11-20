@@ -47,10 +47,16 @@ export function CommissionOverviewCard({
           <CardContent>
             <p className="text-2xl font-bold">{formatCurrency(overview.totalCommissions)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {overview.totalDeals} deals • {formatCurrency(overview.totalSales)} em vendas
+              {overview.totalDeals} {overview.totalDeals === 1 ? 'venda' : 'vendas'} • {formatCurrency(overview.totalSales)} em vendas
               {businessModel === 'MRR' && <span className="ml-1 text-purple-600 dark:text-purple-400 font-medium">(MRR)</span>}
             </p>
             <p className="text-xs text-muted-foreground">{periodLabel}</p>
+            {/* Debug info - remove after investigation */}
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                Debug: {deals.length} deals filtrados no período
+              </p>
+            )}
           </CardContent>
         </Card>
 
