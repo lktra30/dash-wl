@@ -6,3 +6,5 @@ export { BusinessModelCard } from "./business-model-card"
 export { ApiKeysCard } from "./api-keys-card"
 export { BusinessSettingsCard } from "./business-settings-card"
 export { LogoUpload } from "./logo-upload"
+export { ChangePasswordCard } from "./change-password-card"
+

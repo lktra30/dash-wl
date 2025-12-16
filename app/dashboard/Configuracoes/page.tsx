@@ -14,6 +14,7 @@ import {
   BrandCustomizationCard,
   ApiKeysCard,
   BusinessSettingsCard,
+  ChangePasswordCard,
 } from "@/components/settings"
 
 export default function SettingsPage() {
@@ -132,13 +133,14 @@ export default function SettingsPage() {
 
               <div className="flex-1 overflow-auto mt-6">
                 <TabsContent value="perfil" className="m-0 h-full overflow-x-hidden">
-                  <div className="max-w-3xl">
+                  <div className="max-w-3xl mx-auto space-y-6">
                     <UserProfileCard user={user} />
+                    <ChangePasswordCard />
                   </div>
                 </TabsContent>
 
                 <TabsContent value="negocio" className="m-0 h-full overflow-x-hidden">
-                  <div className="max-w-3xl">
+                  <div className="max-w-3xl mx-auto">
                     <BusinessSettingsCard
                       whitelabelName={whitelabelName}
                       onWhitelabelNameChange={setWhitelabelName}
@@ -153,7 +155,7 @@ export default function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="integracoes" className="m-0 h-full overflow-x-hidden">
-                  <div className="max-w-4xl space-y-4">
+                  <div className="max-w-4xl mx-auto space-y-4">
                     {/* Status Header */}
                     <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border">
                       {integrationsConfigured === totalIntegrations ? (
@@ -205,7 +207,7 @@ export default function SettingsPage() {
                 </TabsContent>
 
                 <TabsContent value="personalizacao" className="m-0 h-full overflow-x-hidden">
-                  <div className="max-w-3xl">
+                  <div className="max-w-3xl mx-auto">
                     <BrandCustomizationCard 
                       brandColor={tempBrandColor}
                       onBrandColorChange={setTempBrandColor}
