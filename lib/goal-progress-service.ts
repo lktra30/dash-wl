@@ -1,5 +1,3 @@
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
-
 export interface GoalTargets {
   sdrMeetingsTarget: number;
   closerSalesTarget: number;
@@ -15,44 +13,60 @@ export interface GoalData {
   daily: GoalProgress;
   weekly: GoalProgress;
   monthly: GoalProgress;
-} 
+}
 
 interface Deal {
   value: number;
   duration?: number;
-  updated_at: string;
+  saleDate?: string;
+  status: string;
+}
+
+interface Contact {
+  id: string;
+  meetingDate?: string;
+  status?: string;
+  sdrId?: string;
 }
 
 /**
- * Busca as metas configuradas para o whitelabel
+ * Busca as metas configuradas para o whitelabel via API segura
  */
 export async function getGoalTargets(whitelabelId: string): Promise<GoalTargets> {
-  const supabase = getSupabaseBrowserClient();
-  
-  const { data, error } = await supabase
-    .from('commissions_settings')
-    .select('sdr_meetings_target, closer_sales_target')
-    .eq('whitelabel_id', whitelabelId)
-    .single();
+  try {
+    const response = await fetch("/api/dashboard/commissions/settings", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
 
-  if (error) {
+    if (!response.ok) {
+      return {
+        sdrMeetingsTarget: 20,
+        closerSalesTarget: 10000,
+      };
+    }
+
+    const data = await response.json();
+
+    if (!data) {
+      return {
+        sdrMeetingsTarget: 20,
+        closerSalesTarget: 10000,
+      };
+    }
+
+    return {
+      sdrMeetingsTarget: data.sdrMeetingsTarget || 20,
+      closerSalesTarget: data.closerSalesTarget || 10000,
+    };
+  } catch (error) {
     return {
       sdrMeetingsTarget: 20,
       closerSalesTarget: 10000,
     };
   }
-
-  if (!data) {
-    return {
-      sdrMeetingsTarget: 20,
-      closerSalesTarget: 10000,
-    };
-  }
-
-  return {
-    sdrMeetingsTarget: data.sdr_meetings_target || 20,
-    closerSalesTarget: data.closer_sales_target || 10000,
-  };
 }
 
 /**
@@ -81,15 +95,22 @@ function calculatePercentage(current: number, target: number): number {
 }
 
 /**
- * Busca o progresso de reuniões realizadas (PIPELINE-AWARE)
- * Conta contatos que chegaram em stages com countsAsMeeting: true
- * ou em stages 'meeting'/'reuniao' (fallback para compatibilidade)
+ * Helper function to check if date is within date range
+ */
+function isWithinDateRange(dateStr: string | undefined, startDate: Date, endDate: Date): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  return date >= startDate && date <= endDate;
+}
+
+/**
+ * Busca o progresso de reuniões realizadas via API segura
+ * Conta contatos que chegaram em stages de reunião
  */
 export async function getMeetingsProgress(
   whitelabelId: string,
   employeeId?: string
 ): Promise<GoalData> {
-  const supabase = getSupabaseBrowserClient();
   const now = new Date();
 
   // Início do dia (00:00:00 UTC)
@@ -105,131 +126,113 @@ export async function getMeetingsProgress(
   // Início do mês (00:00:00 UTC)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
-  // Buscar metas
+  // Buscar metas via API segura
   const targets = await getGoalTargets(whitelabelId);
   const monthlyTarget = targets.sdrMeetingsTarget;
   const dailyTarget = getDailyTarget(monthlyTarget);
   const weeklyTarget = getWeeklyTarget(monthlyTarget);
 
-  // Query base para contacts com pipeline stages
-  const buildQuery = (startDate: Date) => {
-    const query = supabase
-      .from('contacts')
-      .select(`
-        id,
-        meeting_date,
-        funnel_stage,
-        sdr_id,
-        pipeline_stages!stage_id (
-          counts_as_meeting,
-          counts_as_sale
-        )
-      `)
-      .eq('whitelabel_id', whitelabelId)
-      .not('meeting_date', 'is', null)
-      .gte('meeting_date', startDate.toISOString())
-      .lte('meeting_date', now.toISOString());
+  try {
+    // Fetch contacts via secure API route
+    const response = await fetch("/api/dashboard/contacts", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
 
-    if (employeeId) {
-      query.eq('sdr_id', employeeId);
+    if (!response.ok) {
+      throw new Error("Failed to fetch contacts");
     }
 
-    return query;
-  };
+    const contacts: Contact[] = await response.json();
 
-  // Buscar contacts de cada período
-  const { data: dailyContacts } = await buildQuery(startOfDay);
-  const { data: weeklyContacts } = await buildQuery(startOfWeek);
-  const { data: monthlyContacts } = await buildQuery(startOfMonth);
+    // Filter contacts by employee if specified
+    let filteredContacts = contacts;
+    if (employeeId) {
+      filteredContacts = contacts.filter(c => c.sdrId === employeeId);
+    }
 
-  // Função para contar reuniões (prioriza flag, fallback para stage name)
-  // Note: All sales should count as meetings, but not all meetings are sales
-  const countMeetings = (contacts: any[]) => {
-    if (!contacts) return 0;
-    return contacts.filter((contact: any) => {
-      return (
-        contact.pipeline_stages?.counts_as_meeting === true ||
-        contact.pipeline_stages?.counts_as_sale === true ||
-        contact.funnel_stage === 'meeting' ||
-        contact.funnel_stage === 'reuniao'
-        // REMOVED: contact.funnel_stage === 'won' - This was causing duplicate counting
-        // Sales are already counted via counts_as_sale flag above
-      );
-    }).length;
-  };
+    // Filter contacts with meeting dates
+    const contactsWithMeetings = filteredContacts.filter(c => c.meetingDate);
 
-  const dailyCount = countMeetings(dailyContacts || []);
-  const weeklyCount = countMeetings(weeklyContacts || []);
-  const monthlyCount = countMeetings(monthlyContacts || []);
+    // Count meetings for each period
+    const dailyCount = contactsWithMeetings.filter(c =>
+      isWithinDateRange(c.meetingDate, startOfDay, now)
+    ).length;
 
-  return {
-    daily: {
-      current: dailyCount,
-      target: dailyTarget,
-      percentage: calculatePercentage(dailyCount, dailyTarget),
-    },
-    weekly: {
-      current: weeklyCount,
-      target: weeklyTarget,
-      percentage: calculatePercentage(weeklyCount, weeklyTarget),
-    },
-    monthly: {
-      current: monthlyCount,
-      target: monthlyTarget,
-      percentage: calculatePercentage(monthlyCount, monthlyTarget),
-    },
-  };
+    const weeklyCount = contactsWithMeetings.filter(c =>
+      isWithinDateRange(c.meetingDate, startOfWeek, now)
+    ).length;
+
+    const monthlyCount = contactsWithMeetings.filter(c =>
+      isWithinDateRange(c.meetingDate, startOfMonth, now)
+    ).length;
+
+    return {
+      daily: {
+        current: dailyCount,
+        target: dailyTarget,
+        percentage: calculatePercentage(dailyCount, dailyTarget),
+      },
+      weekly: {
+        current: weeklyCount,
+        target: weeklyTarget,
+        percentage: calculatePercentage(weeklyCount, weeklyTarget),
+      },
+      monthly: {
+        current: monthlyCount,
+        target: monthlyTarget,
+        percentage: calculatePercentage(monthlyCount, monthlyTarget),
+      },
+    };
+  } catch (error) {
+    return {
+      daily: { current: 0, target: dailyTarget, percentage: 0 },
+      weekly: { current: 0, target: weeklyTarget, percentage: 0 },
+      monthly: { current: 0, target: monthlyTarget, percentage: 0 },
+    };
+  }
 }
 
 /**
  * Calcula o valor de vendas baseado no modelo de negócio
  */
 function calculateSalesValue(deals: Deal[], businessModel: "TCV" | "MRR"): number {
-
   if (!deals || deals.length === 0) {
     return 0;
   }
-  
+
   if (businessModel === "MRR") {
     // MRR: divide each deal value by its duration to get monthly recurring revenue
-    const result = deals.reduce((sum: number, deal: Deal, index: number) => {
+    return deals.reduce((sum: number, deal: Deal) => {
       const value = Number(deal.value) || 0;
       const duration = Number(deal.duration) || 0;
-      
-      
+
       // Only include deals with valid duration > 0
       if (duration > 0) {
         return sum + (value / duration);
       }
       return sum;
     }, 0);
-    
-    return result;
   } else {
     // TCV: sum the total values of all deals
-    const result = deals.reduce((sum: number, deal: Deal, index: number) => {
+    return deals.reduce((sum: number, deal: Deal) => {
       const value = Number(deal.value) || 0;
       return sum + value;
     }, 0);
-    
-    return result;
   }
 }
 
 /**
- * Busca o progresso de vendas realizadas (PIPELINE-AWARE)
- * Conta contatos que chegaram em stages com countsAsSale: true
- * ou com status 'won' (fallback para compatibilidade)
- *
- * NOTE: Ainda usa 'deals' table para valores, mas valida com pipeline stages
+ * Busca o progresso de vendas realizadas via API segura
+ * Conta deals com status 'won'
  */
 export async function getSalesProgress(
   whitelabelId: string,
   employeeId?: string,
   businessModel: "TCV" | "MRR" = "TCV"
 ): Promise<GoalData> {
-
-  const supabase = getSupabaseBrowserClient();
   const now = new Date();
 
   // Início do dia (00:00:00 UTC)
@@ -245,56 +248,69 @@ export async function getSalesProgress(
   // Início do mês (00:00:00 UTC)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 
-  // Buscar metas
+  // Buscar metas via API segura
   const targets = await getGoalTargets(whitelabelId);
   const monthlyTarget = targets.closerSalesTarget;
   const dailyTarget = getDailyTarget(monthlyTarget);
   const weeklyTarget = getWeeklyTarget(monthlyTarget);
 
-  // Query base para deals com valores (ainda precisamos dos valores de deals)
-  const buildDealsQuery = (startDate: Date) => {
-    const query = supabase
-      .from('deals')
-      .select('value, duration, sale_date')
-      .eq('whitelabel_id', whitelabelId)
-      .eq('status', 'won')
-      .not('sale_date', 'is', null)
-      .gte('sale_date', startDate.toISOString())
-      .lte('sale_date', now.toISOString());
+  try {
+    // Fetch deals via secure API route
+    const response = await fetch("/api/dashboard/deals", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
 
-    if (employeeId) {
-      query.eq('closer_id', employeeId);
+    if (!response.ok) {
+      throw new Error("Failed to fetch deals");
     }
 
-    return query;
-  };
+    const deals: Deal[] = await response.json();
 
-  // Buscar deals de cada período
-  const { data: dailyDeals } = await buildDealsQuery(startOfDay);
-  const { data: weeklyDeals } = await buildDealsQuery(startOfWeek);
-  const { data: monthlyDeals } = await buildDealsQuery(startOfMonth);
+    // Filter won deals only
+    const wonDeals = deals.filter(d => d.status === 'won');
 
-  const dailySales = calculateSalesValue(dailyDeals || [], businessModel);
-  const weeklySales = calculateSalesValue(weeklyDeals || [], businessModel);
-  const monthlySales = calculateSalesValue(monthlyDeals || [], businessModel);
+    // Filter deals for each period based on saleDate
+    const dailyDeals = wonDeals.filter(d =>
+      isWithinDateRange(d.saleDate, startOfDay, now)
+    );
 
-  const result = {
-    daily: {
-      current: Math.round(dailySales * 100) / 100,
-      target: dailyTarget,
-      percentage: calculatePercentage(dailySales, dailyTarget),
-    },
-    weekly: {
-      current: Math.round(weeklySales * 100) / 100,
-      target: weeklyTarget,
-      percentage: calculatePercentage(weeklySales, weeklyTarget),
-    },
-    monthly: {
-      current: Math.round(monthlySales * 100) / 100,
-      target: monthlyTarget,
-      percentage: calculatePercentage(monthlySales, monthlyTarget),
-    },
-  };
+    const weeklyDeals = wonDeals.filter(d =>
+      isWithinDateRange(d.saleDate, startOfWeek, now)
+    );
 
-  return result;
+    const monthlyDeals = wonDeals.filter(d =>
+      isWithinDateRange(d.saleDate, startOfMonth, now)
+    );
+
+    const dailySales = calculateSalesValue(dailyDeals, businessModel);
+    const weeklySales = calculateSalesValue(weeklyDeals, businessModel);
+    const monthlySales = calculateSalesValue(monthlyDeals, businessModel);
+
+    return {
+      daily: {
+        current: Math.round(dailySales * 100) / 100,
+        target: dailyTarget,
+        percentage: calculatePercentage(dailySales, dailyTarget),
+      },
+      weekly: {
+        current: Math.round(weeklySales * 100) / 100,
+        target: weeklyTarget,
+        percentage: calculatePercentage(weeklySales, weeklyTarget),
+      },
+      monthly: {
+        current: Math.round(monthlySales * 100) / 100,
+        target: monthlyTarget,
+        percentage: calculatePercentage(monthlySales, monthlyTarget),
+      },
+    };
+  } catch (error) {
+    return {
+      daily: { current: 0, target: dailyTarget, percentage: 0 },
+      weekly: { current: 0, target: weeklyTarget, percentage: 0 },
+      monthly: { current: 0, target: monthlyTarget, percentage: 0 },
+    };
+  }
 }

@@ -1,30 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Contact } from "@/lib/types"
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/supabase-js"
-
-// Transform database snake_case to camelCase
-const transformContact = (dbContact: any): Contact => ({
-  id: dbContact.id,
-  name: dbContact.name,
-  email: dbContact.email,
-  phone: dbContact.phone,
-  company: dbContact.company,
-  status: dbContact.funnel_stage || dbContact.status,
-  pipelineId: dbContact.pipeline_id || dbContact.pipelineId,
-  stageId: dbContact.stage_id || dbContact.stageId,
-  leadSource: dbContact.lead_source || dbContact.leadSource,
-  whitelabelId: dbContact.whitelabel_id || dbContact.whitelabelId,
-  assignedTo: dbContact.assigned_to || dbContact.assignedTo,
-  dealValue: dbContact.deal_value || dbContact.dealValue,
-  dealDuration: dbContact.deal_duration || dbContact.dealDuration,
-  sdrId: dbContact.sdr_id || dbContact.sdrId,
-  closerId: dbContact.closer_id || dbContact.closerId,
-  createdAt: dbContact.created_at || dbContact.createdAt,
-  updatedAt: dbContact.updated_at || dbContact.updatedAt,
-})
 
 export function useContactsRealtime(initialContacts: Contact[] = []) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts)
@@ -35,72 +12,49 @@ export function useContactsRealtime(initialContacts: Contact[] = []) {
     setContacts(initialContacts)
   }, [initialContacts])
 
+  // Fetch contacts via secure API route
+  const fetchContacts = useCallback(async () => {
+    try {
+      setIsLoading(true)
+
+      const response = await fetch("/api/dashboard/contacts", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText)
+        throw new Error(`API error (${response.status}): ${errorText}`)
+      }
+
+      const data = await response.json()
+      setContacts(data)
+    } catch (error) {
+      console.error("Error fetching contacts:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    let channel: RealtimeChannel | null = null
-
-    const setupRealtimeSubscription = async () => {
-      try {
-        setIsLoading(true)
-        const supabase = getSupabaseBrowserClient()
-
-        // Subscribe to real-time changes on contacts table
-        channel = supabase
-          .channel("contacts-changes")
-          .on(
-            "postgres_changes",
-            {
-              event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
-              schema: "public",
-              table: "contacts",
-            },
-            (payload: RealtimePostgresChangesPayload<Contact>) => {
-
-              if (payload.eventType === "INSERT") {
-                const newContact = transformContact(payload.new)
-                setContacts((prev) => {
-                  // Check if contact already exists to avoid duplicates
-                  if (prev.some((c) => c.id === newContact.id)) {
-                    return prev
-                  }
-                  return [...prev, newContact]
-                })
-              } else if (payload.eventType === "UPDATE") {
-                const updatedContact = transformContact(payload.new)
-                setContacts((prev) =>
-                  prev.map((contact) =>
-                    contact.id === updatedContact.id ? updatedContact : contact
-                  )
-                )
-              } else if (payload.eventType === "DELETE") {
-                const deletedContact = payload.old as any
-                setContacts((prev) =>
-                  prev.filter((contact) => contact.id !== deletedContact.id)
-                )
-              }
-            }
-          )
-          .subscribe((status: string) => {
-            if (status === "SUBSCRIBED") {
-              setIsLoading(false)
-            } else if (status === "CHANNEL_ERROR") {
-              setIsLoading(false)
-            }
-          })
-      } catch (error) {
-        setIsLoading(false)
-      }
+    // Only fetch if no initial contacts provided
+    if (initialContacts.length === 0) {
+      fetchContacts()
     }
 
-    setupRealtimeSubscription()
+    // Set up polling for updates (every 30 seconds)
+    // This replaces real-time subscription while maintaining security
+    const pollInterval = setInterval(() => {
+      fetchContacts()
+    }, 30000)
 
-    // Cleanup subscription on unmount
+    // Cleanup on unmount
     return () => {
-      if (channel) {
-        channel.unsubscribe()
-        setIsLoading(false)
-      }
+      clearInterval(pollInterval)
     }
-  }, []) // Empty dependency array - only set up once
+  }, [fetchContacts, initialContacts.length])
 
   // Optimistic update function for immediate UI feedback
   const optimisticUpdate = useCallback((id: string, updates: Partial<Contact>) => {
@@ -133,5 +87,6 @@ export function useContactsRealtime(initialContacts: Contact[] = []) {
     optimisticUpdate,
     optimisticAdd,
     optimisticDelete,
+    refetch: fetchContacts,
   }
 }

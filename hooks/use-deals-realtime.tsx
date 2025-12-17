@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import type { RealtimeChannel } from "@supabase/supabase-js"
 
 interface Deal {
   id: string
@@ -12,19 +10,9 @@ interface Deal {
   status: "open" | "won" | "lost"
   created_at: string
   duration?: number
-  contacts: {
-    id: string
-    name: string
-    company?: string
-  } | null
-  sdr: {
-    id: string
-    name: string
-  } | null
-  closer: {
-    id: string
-    name: string
-  } | null
+  contactId?: string
+  sdrId?: string
+  closerId?: string
 }
 
 interface DealsRealtimeResult {
@@ -35,167 +23,57 @@ interface DealsRealtimeResult {
 }
 
 /**
- * Custom hook for real-time deals synchronization
- * Subscribes to Supabase realtime changes on the deals table
- * Automatically updates when contacts change to won/lost status
+ * Custom hook for deals data with periodic refresh
+ * Uses secure API routes instead of direct Supabase queries
+ * NOTE: Real-time updates are simulated via polling for security
  */
 export function useDealsRealtime(): DealsRealtimeResult {
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const supabase = getSupabaseBrowserClient()
 
-  // Fetch deals with all related data
-  const fetchDeals = async () => {
+  // Fetch deals via secure API route
+  const fetchDeals = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
-        .from("deals")
-        .select(`
-          id,
-          title,
-          value,
-          status,
-          duration,
-          created_at,
-          contacts:contact_id (
-            id,
-            name,
-            company
-          ),
-          sdr:sdr_id (
-            id,
-            name
-          ),
-          closer:closer_id (
-            id,
-            name
-          )
-        `)
-        .order("created_at", { ascending: false })
+      const response = await fetch("/api/dashboard/deals", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      })
 
-      if (fetchError) throw fetchError
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText)
+        throw new Error(`API error (${response.status}): ${errorText}`)
+      }
 
-      setDeals(data as Deal[])
+      const data = await response.json()
+      setDeals(data)
     } catch (err) {
       setError(err as Error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     // Initial fetch
     fetchDeals()
 
-    // Set up realtime subscription
-    const channel: RealtimeChannel = supabase
-      .channel("deals-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to all events: INSERT, UPDATE, DELETE
-          schema: "public",
-          table: "deals",
-        },
-        async (payload: any) => {
+    // Set up polling for updates (every 30 seconds)
+    // This replaces real-time subscription while maintaining security
+    const pollInterval = setInterval(() => {
+      fetchDeals()
+    }, 30000)
 
-          if (payload.eventType === "INSERT") {
-            // Fetch the new deal with all related data
-            const { data: newDeal } = await supabase
-              .from("deals")
-              .select(`
-                id,
-                title,
-                value,
-                status,
-                duration,
-                created_at,
-                contacts:contact_id (
-                  id,
-                  name,
-                  company
-                ),
-                sdr:sdr_id (
-                  id,
-                  name
-                ),
-                closer:closer_id (
-                  id,
-                  name
-                )
-              `)
-              .eq("id", payload.new.id)
-              .single()
-
-            if (newDeal) {
-              setDeals((prev) => [newDeal as Deal, ...prev])
-              
-              // Show toast notification
-              toast.success("Negócio Criado", {
-                description: `${newDeal.title} - ${newDeal.status === "won" ? "Ganho" : "Perdido"}`,
-              })
-            }
-          } else if (payload.eventType === "UPDATE") {
-            // Fetch updated deal with all related data
-            const { data: updatedDeal } = await supabase
-              .from("deals")
-              .select(`
-                id,
-                title,
-                value,
-                status,
-                duration,
-                created_at,
-                contacts:contact_id (
-                  id,
-                  name,
-                  company
-                ),
-                sdr:sdr_id (
-                  id,
-                  name
-                ),
-                closer:closer_id (
-                  id,
-                  name
-                )
-              `)
-              .eq("id", payload.new.id)
-              .single()
-
-            if (updatedDeal) {
-              setDeals((prev) =>
-                prev.map((deal) =>
-                  deal.id === updatedDeal.id ? (updatedDeal as Deal) : deal
-                )
-              )
-
-              // Show toast notification
-              toast.info("Negócio Atualizado", {
-                description: `${updatedDeal.title} - Status: ${updatedDeal.status === "won" ? "Ganho" : "Perdido"}`,
-              })
-            }
-          } else if (payload.eventType === "DELETE") {
-            // Remove deleted deal
-            setDeals((prev) => prev.filter((deal) => deal.id !== payload.old.id))
-
-            // Show toast notification
-            toast.error("Negócio Removido", {
-              description: "Um negócio foi removido do sistema",
-            })
-          }
-        }
-      )
-      .subscribe()
-
-    // Cleanup subscription on unmount
+    // Cleanup on unmount
     return () => {
-      supabase.removeChannel(channel)
+      clearInterval(pollInterval)
     }
-  }, [supabase])
+  }, [fetchDeals])
 
   return {
     deals,
